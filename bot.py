@@ -8,6 +8,11 @@ class Bot:
         self._token = config.TG_BOT_TOKEN
         self._admin_id = config.TG_ADMIN_ID
 
+    def _get_updates(self):
+        url = f'{self._api_url}bot{self._token}/getUpdates'
+        requests.get(url)
+
     def send_message(self, message_text: str):
+        self._get_updates()
         url = f'{self._api_url}bot{self._token}/sendMessage?chat_id={self._admin_id}text={message_text}'
         requests.get(url)
