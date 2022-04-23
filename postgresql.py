@@ -75,12 +75,11 @@ class Database:
             );
             """)
 
-    def execute(self, *args, **kwargs):
-        # Execute a command: this creates a new table
-        self._cur.execute(*args, **kwargs)
-
-    def executemany(self, query, argslist):
-        execute_values(self._cur, query, argslist)
+    def execute(self, query: str, argslist: Union[list, tuple] = None):
+        if argslist and len(argslist) > 1 and query.count('%s') == 1:
+            execute_values(self._cur, query, argslist)
+        else:
+            self._cur.execute(query, argslist)
 
     def fetch(self, one=False) -> Union[tuple, list]:
         if not one:
@@ -88,11 +87,20 @@ class Database:
         if one:
             return self._cur.fetchone()
 
-    def close(self):
+    def clean(self):
+        query = """
+        DELETE FROM clients
+        USING units
+        WHERE clients.country_code = units.country_code 
+        AND clients.unit_id = units.unit_id 
+        AND last_order_datetime + interval '1 day' * units.tz_shift + interval '60 days' 
+              < now() AT TIME ZONE 'UTC' + interval '1 hour';
+        """
+        self.execute(query)
 
+    def close(self):
         # Make the changes to the database persistent
         self._conn.commit()
-
         # Close communication with the database
         self._cur.close()
         self._conn.close()

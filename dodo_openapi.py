@@ -8,7 +8,7 @@ class DodoOpenAPIParser:
         self._session = requests.Session()
         self._public_api_address = 'https://publicapi.dodois.io/ru/api/v1/unitinfo'
 
-    def parse_unit_info(self) -> dict:
+    def parse(self) -> dict:
         result = self._session.get(self._public_api_address)
         # Читаем значение json-объекта
         return result.json()
@@ -24,7 +24,7 @@ class DodoOpenAPIStorer:
             self._db = db
             self._external_db = True
 
-    def store_unit_info(self, json_: dict):
+    def store(self, json_: dict):
         params = []
         for unit in json_:
             # unit - это словарь
@@ -34,7 +34,7 @@ class DodoOpenAPIStorer:
                    ON CONFLICT (country_code, unit_id) DO UPDATE
                    SET (uuid, unit_name, tz_shift) = (EXCLUDED.uuid, EXCLUDED.unit_name, EXCLUDED.tz_shift);"""
         # И отправляем всё одним запросом на сервер, иначе это занимает очень много времени
-        self._db.executemany(query, params)
+        self._db.execute(query, params)
 
         if not self._external_db:
             self._db.close()

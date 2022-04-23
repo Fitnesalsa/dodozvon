@@ -9,4 +9,7 @@ PG_DATABASE = env.str('PG_DATABASE')
 PG_HOST = env.str('PG_HOST')
 PG_PORT = env.int('PG_PORT')
 
+TG_BOT_TOKEN = env.str('TG_BOT_TOKEN')
+TG_ADMIN_ID = env.int('TG_ADMIN_ID')
+
 CONNECT_TIMEOUT = env.int('CONNECT_TIMEOUT')

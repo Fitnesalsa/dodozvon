@@ -49,7 +49,7 @@ class DodoISParser:
             if response.ok:
                 self._authorized = True
 
-    def parse_clients(self) -> None:
+    def _parse_report(self) -> None:
         if self._authorized:
             self._response = self._session.post('https://officemanager.dodopizza.ru/Reports/ClientsStatistic/Export',
                                                 data={
@@ -58,11 +58,11 @@ class DodoISParser:
                                                     'endDate': self._end_date.strftime('%d.%m.%Y'),
                                                     'hidePhoneNumbers': 'false'})
 
-    def read_response(self) -> pd.DataFrame:
+    def _read_response(self) -> pd.DataFrame:
         result = io.BytesIO(self._response.content)
         return pd.read_excel(result, skiprows=10, dtype='object')
 
-    def process_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _process_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
 
         # Добавляем категорийный столбец first_order_types, который будет хранить значения Направления первого заказа
         order_type = CategoricalDtype(categories=['Доставка', 'Самовывоз', 'Ресторан'], ordered=True)
@@ -72,14 +72,19 @@ class DodoISParser:
         df = df.drop(df[df['Дата первого заказа'] < self._start_date].index)
         df = df.drop(df[df['Дата последнего заказа'] >= self._end_date].index)
 
-        # Отдел соответствует отделу первого И последнего заказа ! НО: МНОГО ПИЦЦЕРИЙ В ГОРОДЕ TODO
-        df = df.drop(df[df['Отдел первого заказа'] != self._unit_name].index)
-        df = df.drop(df[df['Отдел последнего заказа'] != self._unit_name].index)
+        # Отдел соответствует отделу первого И последнего заказа
+        df = df.drop(df[~df['Отдел первого заказа'].startswith(self._unit_name)].index)
+        df = df.drop(df[~df['Отдел последнего заказа'].startswith(self._unit_name)].index)
 
         # Номер начинается на +79
         df = df.drop(df[~df['№ телефона'].str.startswith('+79')].index)
 
         return df
+
+    def parse(self) -> pd.DataFrame:
+        self._parse_report()
+        df = self._read_response()
+        return self._process_dataframe(df)
 
 
 class DodoISStorer:
@@ -93,19 +98,26 @@ class DodoISStorer:
             self._external_db = True
         self._unit_id = unit_id
 
-    def store_clients(self, df: pd.DataFrame):
+    def store(self, df: pd.DataFrame):
+        params = []
         for row in df.iterrows():
-            self._db.execute("INSERT INTO clients (country_code, unit_id, phone, first_order_datetime, "
-                             "first_order_city, last_order_datetime, last_order_city, first_order_type, sms_text, "
-                             "sms_text_city, ftp_path_city) VALUES (%(country_code)s, %(unit_id)s, %(phone)s, "
-                             "%(first_date)s, %(first_city)s, %(last_date)s, %(last_city)s, %(first_type)s, %(text)s, "
-                             "%(text_city)s, %(path_city)s) "
-                             "ON CONFLICT DO NOTHING",
-                             {'country_code': 'ru', 'unit_id': self._unit_id, 'phone': row[1]['№ телефона'],
-                              'first_date': row[1]['Дата первого заказа'], 'first_city': row[1]['Отдел первого заказа'],
-                              'last_date': row[1]['Дата последнего заказа'],
-                              'last_city': row[1]['Отдел последнего заказа'],
-                              'first_type': row[1]['first_order_type'], 'text': '', 'text_city': '', 'path_city': ''})
+            params.append(('ru', self._unit_id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
+                           row[1]['Отдел первого заказа'], row[1]['Дата последнего заказа'],
+                           row[1]['Отдел последнего заказа'], row[1]['first_order_type'], '', '', ''))
+        query = """INSERT INTO clients (country_code, unit_id, phone, first_order_datetime,
+                   first_order_city, last_order_datetime, last_order_city, first_order_type, sms_text,
+                   sms_text_city, ftp_path_city) VALUES %s
+                   ON CONFLICT DO NOTHING"""
+        self._db.execute(query, params)
+
+        # записываем дату последнего обновления
+        self._db.execute("""
+        UPDATE auth
+        SET last_update = now() AT TIME ZONE 'UTC'
+        FROM units
+        WHERE country_code = 'ru'
+        AND unit_id = %s;
+        """, (self._unit_id,))
 
         if not self._external_db:
             self._db.close()
