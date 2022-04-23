@@ -83,9 +83,14 @@ class DodoISParser:
 
 
 class DodoISStorer:
-    def __init__(self, unit_id: int):
-        self._db = Database()
-        self._db.connect()
+    def __init__(self, unit_id: int, db: Database = None):
+        if not db:
+            self._db = Database()
+            self._db.connect()
+            self._external_db = False
+        else:
+            self._db = db
+            self._external_db = True
         self._unit_id = unit_id
 
     def store_clients(self, df: pd.DataFrame):
@@ -101,3 +106,6 @@ class DodoISStorer:
                               'last_date': row[1]['Дата последнего заказа'],
                               'last_city': row[1]['Отдел последнего заказа'],
                               'first_type': row[1]['first_order_type'], 'text': '', 'text_city': '', 'path_city': ''})
+
+        if not self._external_db:
+            self._db.close()
