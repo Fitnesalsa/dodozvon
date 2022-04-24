@@ -14,5 +14,5 @@ class Bot:
 
     def send_message(self, message_text: str):
         self._get_updates()
-        url = f'{self._api_url}bot{self._token}/sendMessage?chat_id={self._admin_id}text={message_text}'
+        url = f'{self._api_url}bot{self._token}/sendMessage?chat_id={self._admin_id}text="{message_text}"'
         requests.get(url)

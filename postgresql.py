@@ -75,6 +75,7 @@ class Database:
                 last_update TIMESTAMP
             );
             """)
+
     def _create_table_manager(self):
         self.execute(
             """
@@ -85,7 +86,7 @@ class Database:
                 customer_id INTEGER,
                 start_date DATE,
                 end_date DATE,
-                exception BOOL,
+                shop_exclude BOOLEAN,
                 city VARCHAR(20),
                 source_deliv VARCHAR(20),
                 source_rest VARCHAR(20),
@@ -94,19 +95,20 @@ class Database:
                 promo_rest VARCHAR(150),
                 promo_pickup VARCHAR(150),
                 pizzeria VARCHAR(30),
-                is_active_deliv BOOL,
-                is_active_rest BOOL,
-                is_active_pickup BOOL,
+                is_active_deliv BOOLEAN,
+                is_active_rest BOOLEAN,
+                is_active_pickup BOOLEAN,
                 PRIMARY KEY (country_code, unit_id)
             );
             """)
+
     def execute(self, query: str, argslist: Union[list, tuple] = None):
         if argslist and len(argslist) > 1 and query.count('%s') == 1:
             execute_values(self._cur, query, argslist)
         else:
             self._cur.execute(query, argslist)
 
-    def fetch(self, one=False) -> Union[tuple, list]:
+    def fetch(self, one: bool = False) -> Union[tuple, list]:
         if not one:
             return self._cur.fetchall()
         if one:
@@ -118,8 +120,8 @@ class Database:
         USING units
         WHERE clients.country_code = units.country_code 
         AND clients.unit_id = units.unit_id 
-        AND date_trunc('day', last_order_datetime + interval '1 day' * units.tz_shift + interval '60 days') 
-              < date_trunc('day', now() AT TIME ZONE 'UTC' + interval '1 hour');
+        AND date_trunc('day', first_order_datetime + interval '60 days') 
+              < date_trunc('day', now() AT TIME ZONE 'UTC' + interval '1 hour' * units.tz_shift);
         """
         self.execute(query)
 

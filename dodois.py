@@ -56,7 +56,7 @@ class DodoISParser:
             if response.ok and response.url != 'https://auth.dodopizza.ru/Authenticate/LogOn':
                 self._authorized = True
 
-            else:
+            elif response.url == 'https://auth.dodopizza.ru/Authenticate/LogOn':
                 raise DodoAuthError(f'{self._unit_name}: ошибка авторизации. Проверьте правильность данных.')
 
     def _parse_report(self) -> None:
@@ -94,10 +94,7 @@ class DodoISParser:
         return df
 
     def parse(self) -> pd.DataFrame:
-        try:
-            self._parse_report()
-        except DodoAuthError as e:
-            raise e
+        self._parse_report()
         df = self._read_response()
         self._session.close()
         return self._process_dataframe(df)
