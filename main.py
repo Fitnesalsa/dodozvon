@@ -17,8 +17,7 @@ def run():
     # получаем параметры парсинга
     params_getter = ParametersGetter(db=db)
     params = params_getter.get_parsing_params()
-    for params in params:
-        print(params)
+    print(params)
 
     # передаем парсеру клиентской статистики
     # for params_set in params:

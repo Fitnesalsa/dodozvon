@@ -10,6 +10,7 @@ class DodoOpenAPIParser:
 
     def parse(self) -> dict:
         result = self._session.get(self._public_api_address)
+        self._session.close()
         # Читаем значение json-объекта
         return result.json()
 

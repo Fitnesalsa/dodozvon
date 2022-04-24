@@ -28,7 +28,9 @@ class ParametersGetter:
             SELECT u.unit_id, u.unit_name, u.tz_shift, a.login, a.password, a.last_update
             FROM units u
             JOIN auth a ON u.unit_name = a.unit_name
-            WHERE a.is_active = true;
+            WHERE a.is_active = true
+            AND (a.last_update IS NULL OR 
+                 a.last_update < date_trunc('day', now() AT TIME ZONE 'UTC'));
             """
         )
         return self._db.fetch()

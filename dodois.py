@@ -1,5 +1,6 @@
 import io
 import random
+import re
 from datetime import datetime
 
 import pandas as pd
@@ -9,6 +10,12 @@ from pandas import CategoricalDtype
 
 from config import CONNECT_TIMEOUT
 from postgresql import Database
+
+
+class DodoAuthError(Exception):
+    def __init__(self, message: str = 'Ошибка авторизации'):
+        self.message = message
+        super().__init__(self.message)
 
 
 class DodoISParser:
@@ -46,17 +53,21 @@ class DodoISParser:
                                           data=self._auth_payload,
                                           headers=self._headers_auth,
                                           allow_redirects=True, timeout=CONNECT_TIMEOUT)
-            if response.ok:
+            if response.ok and response.url != 'https://auth.dodopizza.ru/Authenticate/LogOn':
                 self._authorized = True
 
+            else:
+                raise DodoAuthError(f'{self._unit_name}: ошибка авторизации. Проверьте правильность данных.')
+
     def _parse_report(self) -> None:
-        if self._authorized:
-            self._response = self._session.post('https://officemanager.dodopizza.ru/Reports/ClientsStatistic/Export',
-                                                data={
-                                                    'unitsIds': self._unit_id,
-                                                    'beginDate': self._start_date.strftime('%d.%m.%Y'),
-                                                    'endDate': self._end_date.strftime('%d.%m.%Y'),
-                                                    'hidePhoneNumbers': 'false'})
+        if not self._authorized:
+            self._auth()
+        self._response = self._session.post('https://officemanager.dodopizza.ru/Reports/ClientsStatistic/Export',
+                                            data={
+                                                'unitsIds': self._unit_id,
+                                                'beginDate': self._start_date.strftime('%d.%m.%Y'),
+                                                'endDate': self._end_date.strftime('%d.%m.%Y'),
+                                                'hidePhoneNumbers': 'false'})
 
     def _read_response(self) -> pd.DataFrame:
         result = io.BytesIO(self._response.content)
@@ -73,8 +84,9 @@ class DodoISParser:
         df = df.drop(df[df['Дата последнего заказа'] >= self._end_date].index)
 
         # Отдел соответствует отделу первого И последнего заказа
-        df = df.drop(df[~df['Отдел первого заказа'].startswith(self._unit_name)].index)
-        df = df.drop(df[~df['Отдел последнего заказа'].startswith(self._unit_name)].index)
+        city_name = re.match(r'([А-Яа-я -]+)[ -][0-9 -]+', self._unit_name).group(1)
+        df = df.drop(df[~df['Отдел первого заказа'].str.startswith(city_name)].index)
+        df = df.drop(df[~df['Отдел последнего заказа'].str.startswith(city_name)].index)
 
         # Номер начинается на +79
         df = df.drop(df[~df['№ телефона'].str.startswith('+79')].index)
@@ -82,8 +94,12 @@ class DodoISParser:
         return df
 
     def parse(self) -> pd.DataFrame:
-        self._parse_report()
+        try:
+            self._parse_report()
+        except DodoAuthError as e:
+            raise e
         df = self._read_response()
+        self._session.close()
         return self._process_dataframe(df)
 
 
@@ -99,24 +115,26 @@ class DodoISStorer:
         self._unit_id = unit_id
 
     def store(self, df: pd.DataFrame):
-        params = []
-        for row in df.iterrows():
-            params.append(('ru', self._unit_id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
-                           row[1]['Отдел первого заказа'], row[1]['Дата последнего заказа'],
-                           row[1]['Отдел последнего заказа'], row[1]['first_order_type'], '', '', ''))
-        query = """INSERT INTO clients (country_code, unit_id, phone, first_order_datetime,
-                   first_order_city, last_order_datetime, last_order_city, first_order_type, sms_text,
-                   sms_text_city, ftp_path_city) VALUES %s
-                   ON CONFLICT DO NOTHING"""
-        self._db.execute(query, params)
+        if len(df) > 0:
+            params = []
+            for row in df.iterrows():
+                params.append(('ru', self._unit_id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
+                               row[1]['Отдел первого заказа'], row[1]['Дата последнего заказа'],
+                               row[1]['Отдел последнего заказа'], row[1]['first_order_type'], '', '', ''))
+            query = """INSERT INTO clients (country_code, unit_id, phone, first_order_datetime,
+                       first_order_city, last_order_datetime, last_order_city, first_order_type, sms_text,
+                       sms_text_city, ftp_path_city) VALUES %s
+                       ON CONFLICT DO NOTHING"""
+            self._db.execute(query, params)
 
         # записываем дату последнего обновления
         self._db.execute("""
         UPDATE auth
         SET last_update = now() AT TIME ZONE 'UTC'
         FROM units
-        WHERE country_code = 'ru'
-        AND unit_id = %s;
+        WHERE units.country_code = 'ru'
+        AND units.unit_id = %s
+        AND auth.unit_name = units.unit_name;
         """, (self._unit_id,))
 
         if not self._external_db:
