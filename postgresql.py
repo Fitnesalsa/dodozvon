@@ -31,6 +31,7 @@ class Database:
         self._create_table_units()
         self._create_table_clients()
         self._create_table_auth()
+        self._create_table_manager()
 
     def _create_table_units(self):
         self.execute("""
@@ -74,7 +75,31 @@ class Database:
                 last_update TIMESTAMP
             );
             """)
-
+    def _create_table_manager(self):
+        self.execute(
+            """
+            CREATE TABLE IF NOT EXISTS manager (
+                country_code VARCHAR(2),
+                unit_id INTEGER,
+                bot_id INTEGER,
+                customer_id INTEGER,
+                start_date DATE,
+                end_date DATE,
+                exception BOOL,
+                city VARCHAR(20),
+                source_deliv VARCHAR(20),
+                source_rest VARCHAR(20),
+                source_pickup VARCHAR(20),
+                promo_deliv VARCHAR(150),
+                promo_rest VARCHAR(150),
+                promo_pickup VARCHAR(150),
+                pizzeria VARCHAR(30),
+                is_active_deliv BOOL,
+                is_active_rest BOOL,
+                is_active_pickup BOOL,
+                PRIMARY KEY (country_code, unit_id)
+            );
+            """)
     def execute(self, query: str, argslist: Union[list, tuple] = None):
         if argslist and len(argslist) > 1 and query.count('%s') == 1:
             execute_values(self._cur, query, argslist)
