@@ -93,8 +93,8 @@ class Database:
         USING units
         WHERE clients.country_code = units.country_code 
         AND clients.unit_id = units.unit_id 
-        AND last_order_datetime + interval '1 day' * units.tz_shift + interval '60 days' 
-              < now() AT TIME ZONE 'UTC' + interval '1 hour';
+        AND date_trunc('day', last_order_datetime + interval '1 day' * units.tz_shift + interval '60 days') 
+              < date_trunc('day', now() AT TIME ZONE 'UTC' + interval '1 hour');
         """
         self.execute(query)
 

@@ -1,5 +1,5 @@
 from dodo_openapi import DodoOpenAPIParser, DodoOpenAPIStorer
-from dodois import DodoISParser, DodoISStorer
+from dodois import DodoISParser, DodoISStorer, DodoAuthError
 from parameters import ParametersGetter
 from postgresql import Database
 
@@ -17,14 +17,19 @@ def run():
     # получаем параметры парсинга
     params_getter = ParametersGetter(db=db)
     params = params_getter.get_parsing_params()
-    print(params)
 
     # передаем парсеру клиентской статистики
-    # for params_set in params:
-    #     dodois_parser = DodoISParser(*params_set)
-    #     dodois_storer = DodoISStorer(params_set[0], db)
-    #     dodois_result = dodois_parser.parse()
-    #     dodois_storer.store(dodois_result)
+    for params_set in params:
+        try:
+            dodois_parser = DodoISParser(*params_set)
+            dodois_storer = DodoISStorer(params_set[0], db)
+            dodois_result = dodois_parser.parse()
+            dodois_storer.store(dodois_result)
+        except ValueError:
+            print(f'{params_set[1]}: Что-то пошло не так')
+        except DodoAuthError as e:
+            print(e)
+
 
     # чистим бд
     db.clean()
