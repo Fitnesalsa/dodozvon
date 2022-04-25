@@ -1,22 +1,17 @@
 from datetime import datetime, timedelta
 
+from parser import DatabaseWorker
 from postgresql import Database
 
 
-class ParametersGetter:
+class ParametersGetter(DatabaseWorker):
     """
-    Собирает параметры для парсера: country_code, unit_id, login, password,
+    Собирает параметры для парсера: unit_id, login, password,
     tz_shift, unit_name, start_date, end_date.
     """
 
     def __init__(self, db: Database = None):
-        if not db:
-            self._db = Database()
-            self._db.connect()
-            self._external_db = False
-        else:
-            self._db = db
-            self._external_db = True
+        super().__init__(db)
 
     def _get_units_from_db(self) -> list:
         """
@@ -45,11 +40,10 @@ class ParametersGetter:
             if unit[5] is None or datetime.now() + timedelta(hours=unit[2]) - unit[5] > timedelta(days=60):
                 start_date = datetime.now() + timedelta(hours=unit[2]) - timedelta(days=60)
             else:
-                start_date = unit[5] + timedelta(days=1)
+                start_date = unit[5]
             units_to_parse.append((unit[0], unit[1], unit[3], unit[4],
-                                   start_date, datetime.now()))
+                                   start_date, datetime.now() + timedelta(hours=unit[2]) - timedelta(days=1)))
 
-        if not self._external_db:
-            self._db.close()
+        self._db_close()
 
         return units_to_parse

@@ -1,5 +1,3 @@
-from urllib.parse import quote
-
 import config
 import requests
 
@@ -10,7 +8,7 @@ class Bot:
         self._token = config.TG_BOT_TOKEN
         self._admin_id = config.TG_ADMIN_ID
 
-    def _get_updates(self):
+    def _get_updates(self) -> None:
         url = f'{self._api_url}bot{self._token}/getUpdates'
         requests.get(url)
 
@@ -20,4 +18,3 @@ class Bot:
         data = {'chat_id': self._admin_id,
                 'text': message_text}
         requests.post(url, data=data)
-

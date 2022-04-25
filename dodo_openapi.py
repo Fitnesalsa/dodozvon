@@ -1,5 +1,6 @@
 import requests
 
+from parser import DatabaseWorker
 from postgresql import Database
 
 
@@ -15,15 +16,9 @@ class DodoOpenAPIParser:
         return result.json()
 
 
-class DodoOpenAPIStorer:
+class DodoOpenAPIStorer(DatabaseWorker):
     def __init__(self, db: Database = None):
-        if not db:
-            self._db = Database()
-            self._db.connect()
-            self._external_db = False
-        else:
-            self._db = db
-            self._external_db = True
+        super().__init__(db)
 
     def store(self, json_: dict):
         params = []
@@ -37,5 +32,4 @@ class DodoOpenAPIStorer:
         # И отправляем всё одним запросом на сервер, иначе это занимает очень много времени
         self._db.execute(query, params)
 
-        if not self._external_db:
-            self._db.close()
+        self._db_close()

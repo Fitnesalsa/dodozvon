@@ -8,7 +8,9 @@ import requests
 
 from pandas import CategoricalDtype
 
+from bot import Bot
 from config import CONNECT_TIMEOUT
+from parser import DatabaseWorker
 from postgresql import Database
 
 
@@ -100,15 +102,9 @@ class DodoISParser:
         return self._process_dataframe(df)
 
 
-class DodoISStorer:
+class DodoISStorer(DatabaseWorker):
     def __init__(self, unit_id: int, db: Database = None):
-        if not db:
-            self._db = Database()
-            self._db.connect()
-            self._external_db = False
-        else:
-            self._db = db
-            self._external_db = True
+        super().__init__(db)
         self._unit_id = unit_id
 
     def store(self, df: pd.DataFrame):
@@ -121,8 +117,14 @@ class DodoISStorer:
             query = """INSERT INTO clients (country_code, unit_id, phone, first_order_datetime,
                        first_order_city, last_order_datetime, last_order_city, first_order_type, sms_text,
                        sms_text_city, ftp_path_city) VALUES %s
-                       ON CONFLICT DO NOTHING"""
+                       ON CONFLICT (country_code, unit_id, phone) DO UPDATE
+                       SET (last_order_datetime, last_order_city) = 
+                       (EXCLUDED.last_order_datetime, EXCLUDED.last_order_city);
+                       """
             self._db.execute(query, params)
+        else:
+            bot = Bot()
+            bot.send_message(f'{self._unit_id}: выгружен пустой файл Excel.')
 
         # записываем дату последнего обновления
         self._db.execute("""
@@ -134,5 +136,4 @@ class DodoISStorer:
         AND auth.unit_name = units.unit_name;
         """, (self._unit_id,))
 
-        if not self._external_db:
-            self._db.close()
+        self._db_close()
