@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 import config
 import requests
 
@@ -14,5 +16,8 @@ class Bot:
 
     def send_message(self, message_text: str):
         self._get_updates()
-        url = f'{self._api_url}bot{self._token}/sendMessage?chat_id={self._admin_id}text="{message_text}"'
-        requests.get(url)
+        url = f'{self._api_url}bot{self._token}/sendMessage'
+        data = {'chat_id': self._admin_id,
+                'text': message_text}
+        requests.post(url, data=data)
+

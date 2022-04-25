@@ -29,9 +29,9 @@ def run():
             dodois_result = dodois_parser.parse()
             dodois_storer.store(dodois_result)
         except ValueError:
-            print(f'{params_set[1]}: Что-то пошло не так')
+            bot.send_message(f'{params_set[1]}: Что-то пошло не так')
         except DodoAuthError as e:
-            print(e.message)
+            bot.send_message(e.message)
 
     # чистим бд
     db.clean()
