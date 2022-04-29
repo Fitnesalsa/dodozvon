@@ -5,6 +5,7 @@ from dodo_openapi import DodoOpenAPIParser, DodoOpenAPIStorer
 from dodois import DodoISParser, DodoISStorer, DodoAuthError
 from parameters import ParametersGetter
 from postgresql import Database
+from tasker import DatabaseTasker
 
 
 def run():
