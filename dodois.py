@@ -83,13 +83,16 @@ class DodoISParser:
 
     def _process_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
 
+        if len(df) == 0:
+            raise DodoEmptyExcelError
+
         # Добавляем категорийный столбец first_order_types, который будет хранить значения Направления первого заказа
         order_type = CategoricalDtype(categories=['Доставка', 'Самовывоз', 'Ресторан'], ordered=True)
         df['first_order_type'] = df['Направление первого заказа'].astype(order_type).cat.codes
 
         # Дата первого заказа лежит в переданном диапазоне, который совпадает с диапазоном выгрузки
-        df = df.drop(df[df['Дата первого заказа'] < self._start_date].index)
-        df = df.drop(df[df['Дата последнего заказа'] >= self._end_date].index)
+        df = df.drop(df[df['Дата первого заказа'].dt.date < self._start_date].index)
+        df = df.drop(df[df['Дата последнего заказа'].dt.date > self._end_date].index)
 
         # Отдел соответствует отделу первого И последнего заказа
         city_name = re.match(r'([А-Яа-я -]+)[ -][0-9 -]+', self._unit_name).group(1)
@@ -114,22 +117,19 @@ class DodoISStorer(DatabaseWorker):
         self._unit_id = unit_id
 
     def store(self, df: pd.DataFrame):
-        if len(df) > 0:
-            params = []
-            for row in df.iterrows():
-                params.append(('ru', self._unit_id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
-                               row[1]['Отдел первого заказа'], row[1]['Дата последнего заказа'],
-                               row[1]['Отдел последнего заказа'], row[1]['first_order_type'], '', '', ''))
-            query = """INSERT INTO clients (country_code, unit_id, phone, first_order_datetime,
-                       first_order_city, last_order_datetime, last_order_city, first_order_type, sms_text,
-                       sms_text_city, ftp_path_city) VALUES %s
-                       ON CONFLICT (country_code, unit_id, phone) DO UPDATE
-                       SET (last_order_datetime, last_order_city) = 
-                       (EXCLUDED.last_order_datetime, EXCLUDED.last_order_city);
-                       """
-            self._db.execute(query, params)
-        else:
-            raise DodoEmptyExcelError()
+        params = []
+        for row in df.iterrows():
+            params.append(('ru', self._unit_id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
+                           row[1]['Отдел первого заказа'], row[1]['Дата последнего заказа'],
+                           row[1]['Отдел последнего заказа'], row[1]['first_order_type'], '', '', ''))
+        query = """INSERT INTO clients (country_code, unit_id, phone, first_order_datetime,
+                   first_order_city, last_order_datetime, last_order_city, first_order_type, sms_text,
+                   sms_text_city, ftp_path_city) VALUES %s
+                   ON CONFLICT (country_code, unit_id, phone) DO UPDATE
+                   SET (last_order_datetime, last_order_city) = 
+                   (EXCLUDED.last_order_datetime, EXCLUDED.last_order_city);
+                   """
+        self._db.execute(query, params)
 
         # записываем дату последнего обновления
         self._db.execute("""

@@ -38,11 +38,11 @@ class ParametersGetter(DatabaseWorker):
             # мы все равно парсим все активные юниты (is_active), и забираем их все из бд,
             # а после этого уже определяем для каждого юнита их start_date и end_date
             if unit[5] is None or datetime.now() + timedelta(hours=unit[2]) - unit[5] > timedelta(days=60):
-                start_date = datetime.now() + timedelta(hours=unit[2]) - timedelta(days=60)
+                start_date = (datetime.now() + timedelta(hours=unit[2]) - timedelta(days=60)).date()
             else:
-                start_date = unit[5]
+                start_date = unit[5].date()
             units_to_parse.append((unit[0], unit[1], unit[3], unit[4],
-                                   start_date, datetime.now() + timedelta(hours=unit[2]) - timedelta(days=1)))
+                                   start_date, (datetime.now() + timedelta(hours=unit[2])).date()))
 
         self._db_close()
 
