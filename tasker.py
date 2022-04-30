@@ -55,12 +55,12 @@ class DatabaseTasker(DatabaseWorker):
 
         # upload file
         upload_response = requests.get(f'{request_url}/upload?path=%2F{YANDEX_NEW_CLIENTS_FOLDER}%2F{filename}'
-                                       f'&overwrite=false', headers=headers).json()
+                                       f'&overwrite=true', headers=headers).json()
         with open(filename, 'rb') as f:
             try:
-                response = requests.put(upload_response['href'], files={'file': f})
+                requests.put(upload_response['href'], files={'file': f})
             except KeyError:
-                raise YandexUploadError(filename, upload_response.json())
+                raise YandexUploadError(filename, upload_response)
 
     def create_tables(self):
         pairs = self._get_query_pairs()
