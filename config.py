@@ -10,7 +10,7 @@ PG_HOST = env.str('PG_HOST')
 PG_PORT = env.int('PG_PORT')
 
 TG_BOT_TOKEN = env.str('TG_BOT_TOKEN')
-TG_ADMIN_ID = env.int('TG_ADMIN_ID')
+TG_ADMIN_ID = env.list('TG_ADMIN_ID', subcast=int)
 
 YANDEX_API_TOKEN = env.str('YANDEX_API_TOKEN')
 
