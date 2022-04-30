@@ -4,10 +4,21 @@ from datetime import datetime, timedelta
 import pandas as pd
 import requests
 
-from bot import Bot
-from config import YANDEX_API_TOKEN
+from config import YANDEX_API_TOKEN, YANDEX_NEW_CLIENTS_FOLDER
 from parser import DatabaseWorker
 from postgresql import Database
+
+
+class YandexUploadError(Exception):
+    def __init__(self, filename: str, upload_response: dict):
+        self.message = f'Ошибка при загрузке на диск. Файл: {filename}, ответ: {upload_response}'
+        super().__init__(self.message)
+
+
+class YandexCreateFolderError(Exception):
+    def __init__(self, filename: str, upload_response: dict):
+        self.message = f'Ошибка при создании папки {YANDEX_NEW_CLIENTS_FOLDER}, ответ: {upload_response}'
+        super().__init__(self.message)
 
 
 class DatabaseTasker(DatabaseWorker):
@@ -27,18 +38,28 @@ class DatabaseTasker(DatabaseWorker):
 
     @staticmethod
     def _yandex_upload(filename: str):
-        upload_request_url = 'https://cloud-api.yandex.net/v1/disk/resources/upload'
+        request_url = 'https://cloud-api.yandex.net/v1/disk/resources'
         headers = {'Content-Type': 'application/json',
                    'Accept': 'application/json',
                    'Authorization': f'OAuth {YANDEX_API_TOKEN}'}
-        upload_response = requests.get(f'{upload_request_url}?path=/call_new_clients/{filename}%overwrite=false',
-                                       headers=headers).json()
+
+        # check if folder exists
+        check_folder_response = requests.get(f'{request_url}?path=%2F{YANDEX_NEW_CLIENTS_FOLDER}',
+                                             headers=headers).json()
+        if check_folder_response.get('error') == 'DiskNotFoundError':
+            # create folder
+            put_folder_response = requests.put(f'{request_url}?path=%2F{YANDEX_NEW_CLIENTS_FOLDER}',
+                                               headers=headers).json()
+            if 'error' in put_folder_response.keys():
+                raise YandexCreateFolderError
+        upload_response = requests.get(f'{request_url}/upload?path=%2F{YANDEX_NEW_CLIENTS_FOLDER}%2F{filename}'
+                                       f'&overwrite=false', headers=headers).json()
+
         with open(filename, 'rb') as f:
             try:
-                requests.put(upload_response['href'], files={'file': f})
+                response = requests.put(upload_response['href'], files={'file': f})
             except KeyError:
-                bot = Bot()
-                bot.send_message(f'Ошибка при загрузке на диск. Файл: {filename}, ответ: {upload_response}')
+                raise YandexUploadError(filename, response.json())
 
     def create_tables(self):
         pairs = self._get_query_pairs()
@@ -84,14 +105,16 @@ class DatabaseTasker(DatabaseWorker):
                 'first_order_datetime'
             ])
 
-            df = df[['phone', 'promocode', 'city', 'shop', 'first_order_city', 'first_order_datetime', 'source']]
-
             # generate filename
             source_str = ''
             if 0 in df['first_order_type']:
                 source_str += 'D_'
             if 1 in df['first_order_type'] or 2 in df['first_order_type']:
                 source_str += 'R+SV_'
+
+            # drop extra columns
+            df = df[['phone', 'promocode', 'city', 'shop', 'first_order_city', 'first_order_datetime', 'source']]
+
             filename = f'{datetime.now() + timedelta(hours=3):%d.%m.%Y}_NK_{source_str}Blok-{customer_id}_' \
                        f'{datetime.now() + timedelta(hours=tz_shift) - timedelta(days=8):%d.%m.%Y}-' \
                        f'{datetime.now() + timedelta(hours=tz_shift) - timedelta(days=1):%d.%m.%Y}_tz-' \
