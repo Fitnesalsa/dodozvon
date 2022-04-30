@@ -52,9 +52,10 @@ class DatabaseTasker(DatabaseWorker):
                                                headers=headers).json()
             if 'error' in put_folder_response.keys():
                 raise YandexCreateFolderError
+
+        # upload file
         upload_response = requests.get(f'{request_url}/upload?path=%2F{YANDEX_NEW_CLIENTS_FOLDER}%2F{filename}'
                                        f'&overwrite=false', headers=headers).json()
-
         with open(filename, 'rb') as f:
             try:
                 response = requests.put(upload_response['href'], files={'file': f})
