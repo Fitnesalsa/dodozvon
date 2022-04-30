@@ -124,7 +124,7 @@ class DodoISStorer(DatabaseWorker):
             self._db.execute(query, params)
         else:
             bot = Bot()
-            unit_name = self._db.execute("SELECT unit_name FROM units WHERE unit_id = %s;", self._unit_id)
+            unit_name = self._db.execute("SELECT unit_name FROM units WHERE unit_id = %s;", (self._unit_id,))
             bot.send_message(f'{unit_name}: выгружен пустой файл Excel.')
 
         # записываем дату последнего обновления
