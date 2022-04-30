@@ -1,6 +1,6 @@
 from bot import Bot
 from dodo_openapi import DodoOpenAPIParser, DodoOpenAPIStorer
-from dodois import DodoISParser, DodoISStorer, DodoAuthError
+from dodois import DodoISParser, DodoISStorer, DodoAuthError, DodoEmptyExcelError
 from parameters import ParametersGetter
 from postgresql import Database
 
@@ -30,8 +30,8 @@ def run():
             dodois_storer.store(dodois_result)
         except ValueError:
             bot.send_message(f'{params_set[1]}: Что-то пошло не так')
-        except DodoAuthError as e:
-            bot.send_message(e.message)
+        except (DodoAuthError, DodoEmptyExcelError) as e:
+            bot.send_message(f'{params_set[1]}: {e.message}')
 
     # чистим бд
     db.clean()

@@ -20,6 +20,12 @@ class DodoAuthError(Exception):
         super().__init__(self.message)
 
 
+class DodoEmptyExcelError(Exception):
+    def __init__(self, message: str = 'Выгружен пустой файл Excel'):
+        self.message = message
+        super().__init__(self.message)
+
+
 class DodoISParser:
     """
     Класс для сбора данных из ДОДО ИС с заданными параметрами
@@ -59,7 +65,7 @@ class DodoISParser:
                 self._authorized = True
 
             elif response.url == 'https://auth.dodopizza.ru/Authenticate/LogOn':
-                raise DodoAuthError(f'{self._unit_name}: ошибка авторизации. Проверьте правильность данных.')
+                raise DodoAuthError('Ошибка авторизации. Проверьте правильность данных.')
 
     def _parse_report(self) -> None:
         if not self._authorized:
@@ -123,9 +129,7 @@ class DodoISStorer(DatabaseWorker):
                        """
             self._db.execute(query, params)
         else:
-            bot = Bot()
-            unit_name = self._db.execute("SELECT unit_name FROM units WHERE unit_id = %s;", (self._unit_id,))
-            bot.send_message(f'{unit_name}: выгружен пустой файл Excel.')
+            raise DodoEmptyExcelError()
 
         # записываем дату последнего обновления
         self._db.execute("""
