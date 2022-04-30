@@ -60,7 +60,7 @@ class DatabaseTasker(DatabaseWorker):
             try:
                 response = requests.put(upload_response['href'], files={'file': f})
             except KeyError:
-                raise YandexUploadError(filename, response.json())
+                raise YandexUploadError(filename, upload_response.json())
 
     def create_tables(self):
         pairs = self._get_query_pairs()
