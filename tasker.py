@@ -62,7 +62,7 @@ class DatabaseTasker(DatabaseWorker):
             except KeyError:
                 raise YandexUploadError(filename, upload_response)
 
-    def create_tables(self):
+    def create_new_clients_tables(self):
         pairs = self._get_query_pairs()
         for customer_id, tz_shift in pairs:
             self._db.execute("""
@@ -125,3 +125,6 @@ class DatabaseTasker(DatabaseWorker):
             df.to_excel(filename, index=False)
             self._yandex_upload(filename)
             os.remove(filename)
+
+    def create_lost_clients_tables(self):
+        pass

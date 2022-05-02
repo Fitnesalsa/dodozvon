@@ -8,7 +8,7 @@ def run():
 
     try:
         db_tasker = DatabaseTasker()
-        db_tasker.create_tables()
+        db_tasker.create_new_clients_tables()
     except (YandexCreateFolderError, YandexUploadError) as e:
         bot.send_message(e.message)
 
