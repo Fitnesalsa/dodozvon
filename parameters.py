@@ -33,6 +33,17 @@ class ParametersGetter(DatabaseWorker):
     def get_parsing_params(self) -> list:
         units_to_parse = []
         for unit in self._get_units_from_db():
+            # overall_start_date = полтора года назад datetime.now() + часовая зона - timedelta(days=548)
+            # overall_end_date = сегодня
+            # start_date = overall_start_date
+            # end_date = overall_start_date + timedelta(days=60)
+            # while start_date < overall_end_date:
+            #   if end_date > overall_end_date:
+            #       end_date = overall_end_date
+            #   выполняем основной код
+            #   start_date = end_date + timedelta(days=1)
+            #   end_date = start_date + timedelta(days=60)
+
             # параметры start_date и end_date определяем на этом этапе;
             # отказались от первоначальной идеи вставить фильтр в базу данных, т.к. логика другая:
             # мы все равно парсим все активные юниты (is_active), и забираем их все из бд,
