@@ -8,7 +8,6 @@ import requests
 
 from pandas import CategoricalDtype
 
-from bot import Bot
 from config import CONNECT_TIMEOUT
 from parser import DatabaseWorker
 from postgresql import Database

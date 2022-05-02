@@ -122,6 +122,6 @@ class DatabaseTasker(DatabaseWorker):
                        f'{tz_shift - 3}.xlsx'
 
             # save file, upload to Yandex Disk and delete
-            df.to_excel(filename)
+            df.to_excel(filename, index=False)
             self._yandex_upload(filename)
             os.remove(filename)
