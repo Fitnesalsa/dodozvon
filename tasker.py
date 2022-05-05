@@ -1,4 +1,4 @@
-import os
+promocodeimport os
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -102,8 +102,8 @@ class DatabaseTasker(DatabaseWorker):
             table = self._db.fetch()
 
             df = pd.DataFrame(table, columns=[
-                'phone', 'first_order_type', 'source', 'promocode', 'city', 'shop', 'first_order_city',
-                'first_order_datetime'
+                'phone', 'first_order_type', 'source', 'promokod', 'city', 'pizzeria', 'otdel',
+                'first-order'
             ])
 
             # generate filename
@@ -114,7 +114,7 @@ class DatabaseTasker(DatabaseWorker):
                 source_str += 'R+SV_'
 
             # drop extra columns
-            df = df[['phone', 'promocode', 'city', 'shop', 'first_order_city', 'first_order_datetime', 'source']]
+            df = df[['phone', 'promokod', 'city', 'pizzeria', 'otdel', 'first-order', 'source']]
 
             filename = f'{datetime.now() + timedelta(hours=3):%d.%m.%Y}_NK_{source_str}Blok-{customer_id}_' \
                        f'{datetime.now() + timedelta(hours=tz_shift) - timedelta(days=8):%d.%m.%Y}-' \
