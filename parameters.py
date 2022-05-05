@@ -25,7 +25,7 @@ class ParametersGetter(DatabaseWorker):
             JOIN auth a ON u.unit_name = a.unit_name
             WHERE a.is_active = true
             AND (a.last_update IS NULL OR 
-                 a.last_update < date_trunc('day', now() AT TIME ZONE 'UTC'));
+                 a.last_update < date_trunc('day', now() AT TIME ZONE 'Europe/Moscow'));
             """
         )
         return self._db.fetch()
