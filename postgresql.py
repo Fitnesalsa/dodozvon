@@ -62,7 +62,7 @@ class Database:
                 sms_text VARCHAR(150),
                 sms_text_city VARCHAR(30),
                 ftp_path_city VARCHAR(15),
-                UNIQUE (country_code, unit_id)
+                UNIQUE (country_code, unit_id, phone)
             );
         """)
 
