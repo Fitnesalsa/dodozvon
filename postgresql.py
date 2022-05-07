@@ -36,6 +36,7 @@ class Database:
     def _create_table_units(self):
         self.execute("""
             CREATE TABLE IF NOT EXISTS units (
+                id SERIAL PRIMARY KEY,
                 country_code VARCHAR(2),
                 unit_id INTEGER,
                 uuid VARCHAR(32),
@@ -49,6 +50,7 @@ class Database:
         # first_order_type: 0 - Доставка, 1 - Самовывоз, 2 - Ресторан, 3 - Прочее
         self.execute("""
             CREATE TABLE IF NOT EXISTS clients (
+                id SERIAL PRIMARY KEY,
                 country_code VARCHAR(2),
                 unit_id INTEGER,
                 phone VARCHAR(20),
@@ -60,7 +62,7 @@ class Database:
                 sms_text VARCHAR(150),
                 sms_text_city VARCHAR(30),
                 ftp_path_city VARCHAR(15),
-                PRIMARY KEY (country_code, unit_id, phone)
+                PRIMARY KEY (country_code, unit_id)
             );
         """)
 
@@ -68,6 +70,7 @@ class Database:
         self.execute(
             """
             CREATE TABLE IF NOT EXISTS auth (
+                id SERIAL PRIMARY KEY,
                 unit_name VARCHAR(30) PRIMARY KEY,
                 login VARCHAR(256),
                 password VARCHAR(256),
@@ -80,6 +83,7 @@ class Database:
         self.execute(
             """
             CREATE TABLE IF NOT EXISTS manager (
+                id SERIAL PRIMARY KEY,
                 country_code VARCHAR(2),
                 unit_id INTEGER,
                 bot_id INTEGER,
