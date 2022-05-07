@@ -42,7 +42,7 @@ class Database:
                 uuid VARCHAR(32),
                 unit_name VARCHAR(30),
                 tz_shift INTEGER,
-                PRIMARY KEY (country_code, unit_id)
+                UNIQUE (country_code, unit_id)
             );
         """)
 
@@ -62,7 +62,7 @@ class Database:
                 sms_text VARCHAR(150),
                 sms_text_city VARCHAR(30),
                 ftp_path_city VARCHAR(15),
-                PRIMARY KEY (country_code, unit_id)
+                UNIQUE (country_code, unit_id)
             );
         """)
 
@@ -71,7 +71,7 @@ class Database:
             """
             CREATE TABLE IF NOT EXISTS auth (
                 id SERIAL PRIMARY KEY,
-                unit_name VARCHAR(30) PRIMARY KEY,
+                unit_name VARCHAR(30) UNIQUE,
                 login VARCHAR(256),
                 password VARCHAR(256),
                 is_active BOOLEAN,
@@ -102,7 +102,7 @@ class Database:
                 is_active_deliv BOOLEAN,
                 is_active_rest BOOLEAN,
                 is_active_pickup BOOLEAN,
-                PRIMARY KEY (country_code, unit_id)
+                UNIQUE (country_code, unit_id)
             );
             """)
 
