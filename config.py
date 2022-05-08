@@ -16,3 +16,17 @@ YANDEX_API_TOKEN = env.str('YANDEX_API_TOKEN')
 YANDEX_NEW_CLIENTS_FOLDER = env.str('YANDEX_NEW_CLIENTS_FOLDER')
 
 CONNECT_TIMEOUT = env.int('CONNECT_TIMEOUT')
+
+TIMEZONES = {
+    2: 'Europe/Kaliningrad',
+    3: 'Europe/Moscow',
+    4: 'Europe/Samara',
+    5: 'Asia/Yekaterinburg',
+    6: 'Asia/Omsk',
+    7: 'Asia/Krasnoyarsk',
+    8: 'Asia/Irkutsk',
+    9: 'Asia/Yakutsk',
+    10: 'Asia/Vladivostok',
+    11: 'Asia/Magadan',
+    12: 'Asia/Kamchatka'
+}

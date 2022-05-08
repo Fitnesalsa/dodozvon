@@ -28,8 +28,8 @@ def run():
             dodois_storer = DodoISStorer(id_, db=db)
             dodois_result = dodois_parser.parse()
             dodois_storer.store(dodois_result)
-        except ValueError:
-            bot.send_message(f'{params_set[1]}: Что-то пошло не так')
+        # except ValueError:
+        #     bot.send_message(f'{params_set[1]}: Что-то пошло не так')
         except (DodoAuthError, DodoEmptyExcelError) as e:
             bot.send_message(f'{params_set[1]}: {e.message}')
 

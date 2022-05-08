@@ -53,9 +53,9 @@ class Database:
                 id SERIAL PRIMARY KEY,
                 db_unit_id INTEGER,
                 phone VARCHAR(20),
-                first_order_datetime TIMESTAMP,
+                first_order_datetime TIMESTAMP WITH TIME ZONE,
                 first_order_city VARCHAR(30),
-                last_order_datetime TIMESTAMP,
+                last_order_datetime TIMESTAMP WITH TIME ZONE,
                 last_order_city VARCHAR(30),
                 first_order_type INTEGER,
                 sms_text VARCHAR(150),
@@ -78,7 +78,7 @@ class Database:
                 login VARCHAR(256),
                 password VARCHAR(256),
                 is_active BOOLEAN,
-                last_update TIMESTAMP,
+                last_update TIMESTAMP WITH TIME ZONE,
                 CONSTRAINT fk_units
                     FOREIGN KEY (db_unit_id)
                         REFERENCES units(id)

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import requests
 
+import config
 from config import YANDEX_API_TOKEN, YANDEX_NEW_CLIENTS_FOLDER
 from parser import DatabaseWorker
 from postgresql import Database
@@ -31,6 +32,8 @@ class DatabaseTasker(DatabaseWorker):
             SELECT m.customer_id, u.tz_shift
             FROM units u
             JOIN manager m on m.db_unit_id = u.id
+            JOIN auth a on u.id = a.db_unit_id
+            WHERE a.is_active = true
             GROUP BY m.customer_id, u.tz_shift;
         """)
 
@@ -89,9 +92,9 @@ class DatabaseTasker(DatabaseWorker):
                 JOIN manager m ON m.db_unit_id = u.id
                 WHERE m.customer_id = %s 
                     AND u.tz_shift = %s
-                    AND c.first_order_datetime >= date_trunc(
+                    AND c.first_order_datetime + interval '1 hour' * u.tz_shift >= date_trunc(
                         'day', now() AT TIME ZONE 'UTC' + interval '1 hour' * u.tz_shift - interval '8 days')
-                    AND c.first_order_datetime < date_trunc(
+                    AND c.first_order_datetime + interval '1 hour' * u.tz_shift < date_trunc(
                         'day', now() AT TIME ZONE 'UTC' + interval '1 hour' * u.tz_shift)
             )
             SELECT * FROM pair_table
@@ -106,6 +109,9 @@ class DatabaseTasker(DatabaseWorker):
                 'first-order'
             ])
 
+            # преобразовываем first-order в правильную таймзону, чтобы в итоговом файле были правильные даты
+            df['first-order'] = df['first-order'].dt.tz_convert(config.TIMEZONES[tz_shift]).dt.tz_localize(None)
+
             # generate filename
             source_str = ''
             if 0 in df['first_order_type']:
@@ -116,9 +122,9 @@ class DatabaseTasker(DatabaseWorker):
             # drop extra columns
             df = df[['phone', 'promokod', 'city', 'pizzeria', 'otdel', 'first-order', 'source']]
 
-            filename = f'{datetime.now() + timedelta(hours=3):%d.%m.%Y}_NK_{source_str}Blok-{customer_id}_' \
-                       f'{datetime.now() + timedelta(hours=tz_shift) - timedelta(days=8):%d.%m.%Y}-' \
-                       f'{datetime.now() + timedelta(hours=tz_shift) - timedelta(days=1):%d.%m.%Y}_tz-' \
+            filename = f'{datetime.utcnow() + timedelta(hours=3):%d.%m.%Y}_NK_{source_str}Blok-{customer_id}_' \
+                       f'{datetime.utcnow() + timedelta(hours=tz_shift) - timedelta(days=8):%d.%m.%Y}-' \
+                       f'{datetime.utcnow() + timedelta(hours=tz_shift) - timedelta(days=1):%d.%m.%Y}_tz-' \
                        f'{tz_shift - 3}.xlsx'
 
             # save file, upload to Yandex Disk and delete

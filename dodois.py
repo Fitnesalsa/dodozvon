@@ -8,6 +8,7 @@ import requests
 
 from pandas import CategoricalDtype
 
+import config
 from config import CONNECT_TIMEOUT
 from parser import DatabaseWorker
 from postgresql import Database
@@ -30,7 +31,7 @@ class DodoISParser:
     Класс для сбора данных из ДОДО ИС с заданными параметрами
     """
 
-    def __init__(self, unit_id: int, unit_name: str, login: str, password: str,
+    def __init__(self, unit_id: int, unit_name: str, login: str, password: str, tz_shift: int,
                  start_date: datetime, end_date: datetime):
         self._user_agents = [
             'Mozilla/5.0 (Windows NT 6.3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 YaBrowser/17.6.1.749 Yowser/2.5 Safari/537.36',
@@ -53,6 +54,8 @@ class DodoISParser:
         self._unit_name = unit_name
         self._start_date = start_date
         self._end_date = end_date
+        self._tz_shift = tz_shift
+        self._this_timezone = config.TIMEZONES[self._tz_shift]
 
     def _auth(self) -> None:
         if not self._authorized:
@@ -92,6 +95,14 @@ class DodoISParser:
         # Дата первого заказа лежит в переданном диапазоне, который совпадает с диапазоном выгрузки
         df = df.drop(df[df['Дата первого заказа'].dt.date < self._start_date].index)
         df = df.drop(df[df['Дата последнего заказа'].dt.date > self._end_date].index)
+
+        # Сохраняем tz в даты
+        df['Дата первого заказа'] = df['Дата первого заказа'].dt.tz_localize(self._this_timezone)
+        df['Дата последнего заказа'] = df['Дата последнего заказа'].dt.tz_localize(self._this_timezone)
+
+        # Переводим всё в UTC
+        df['Дата первого заказа'] = df['Дата первого заказа'].dt.tz_convert('UTC')
+        df['Дата последнего заказа'] = df['Дата последнего заказа'].dt.tz_convert('UTC')
 
         # Отдел соответствует отделу первого И последнего заказа
         city_name = re.match(r'([А-Яа-я -]+)[ -][0-9 -]+', self._unit_name).group(1)
