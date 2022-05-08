@@ -51,8 +51,7 @@ class Database:
         self.execute("""
             CREATE TABLE IF NOT EXISTS clients (
                 id SERIAL PRIMARY KEY,
-                country_code VARCHAR(2),
-                unit_id INTEGER,
+                db_unit_id INTEGER,
                 phone VARCHAR(20),
                 first_order_datetime TIMESTAMP,
                 first_order_city VARCHAR(30),
@@ -62,7 +61,11 @@ class Database:
                 sms_text VARCHAR(150),
                 sms_text_city VARCHAR(30),
                 ftp_path_city VARCHAR(15),
-                UNIQUE (country_code, unit_id, phone)
+                UNIQUE (db_unit_id, phone),
+                CONSTRAINT fk_units
+                    FOREIGN KEY (db_unit_id)
+                        REFERENCES units(id)
+                        ON DELETE CASCADE
             );
         """)
 
@@ -71,11 +74,15 @@ class Database:
             """
             CREATE TABLE IF NOT EXISTS auth (
                 id SERIAL PRIMARY KEY,
-                unit_name VARCHAR(30) UNIQUE,
+                db_unit_id INTEGER,
                 login VARCHAR(256),
                 password VARCHAR(256),
                 is_active BOOLEAN,
-                last_update TIMESTAMP
+                last_update TIMESTAMP,
+                CONSTRAINT fk_units
+                    FOREIGN KEY (db_unit_id)
+                        REFERENCES units(id)
+                        ON DELETE CASCADE
             );
             """)
 
@@ -84,8 +91,7 @@ class Database:
             """
             CREATE TABLE IF NOT EXISTS manager (
                 id SERIAL PRIMARY KEY,
-                country_code VARCHAR(2),
-                unit_id INTEGER,
+                db_unit_id INTEGER,
                 bot_id INTEGER,
                 customer_id INTEGER,
                 start_date DATE,
@@ -102,7 +108,11 @@ class Database:
                 is_active_deliv BOOLEAN,
                 is_active_rest BOOLEAN,
                 is_active_pickup BOOLEAN,
-                UNIQUE (country_code, unit_id)
+                UNIQUE (country_code, unit_id),
+                CONSTRAINT fk_units
+                    FOREIGN KEY (db_unit_id)
+                        REFERENCES units(id)
+                        ON DELETE CASCADE
             );
             """)
 
@@ -122,8 +132,7 @@ class Database:
         query = """
         DELETE FROM clients
         USING units
-        WHERE clients.country_code = units.country_code 
-        AND clients.unit_id = units.unit_id 
+        WHERE clients.db_unit_id = units.id 
         AND date_trunc('day', first_order_datetime + interval '60 days') 
               < date_trunc('day', now() AT TIME ZONE 'UTC' + interval '1 hour' * units.tz_shift);
         """

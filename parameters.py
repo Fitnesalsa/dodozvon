@@ -6,7 +6,7 @@ from postgresql import Database
 
 class ParametersGetter(DatabaseWorker):
     """
-    Собирает параметры для парсера: unit_id, login, password,
+    Собирает параметры для парсера: id, unit_id, login, password,
     tz_shift, unit_name, start_date, end_date.
     """
 
@@ -20,9 +20,9 @@ class ParametersGetter(DatabaseWorker):
         """
         self._db.execute(
             """
-            SELECT u.unit_id, u.unit_name, u.tz_shift, a.login, a.password, a.last_update
+            SELECT u.id, u.unit_id, u.unit_name, u.tz_shift, a.login, a.password, a.last_update
             FROM units u
-            JOIN auth a ON u.unit_name = a.unit_name
+            JOIN auth a ON u.id = a.db_unit_id
             WHERE a.is_active = true
             AND (a.last_update IS NULL OR 
                  a.last_update < date_trunc('day', now() AT TIME ZONE 'UTC'));
@@ -32,7 +32,7 @@ class ParametersGetter(DatabaseWorker):
 
     def get_parsing_params(self) -> list:
         units_to_parse = []
-        for unit in self._get_units_from_db():
+        for (id_, unit_id, unit_name, tz_shift, login, password, last_update) in self._get_units_from_db():
             # overall_start_date = полтора года назад datetime.now() + часовая зона - timedelta(days=548)
             # overall_end_date = сегодня
             # start_date = overall_start_date
@@ -48,12 +48,12 @@ class ParametersGetter(DatabaseWorker):
             # отказались от первоначальной идеи вставить фильтр в базу данных, т.к. логика другая:
             # мы все равно парсим все активные юниты (is_active), и забираем их все из бд,
             # а после этого уже определяем для каждого юнита их start_date и end_date
-            if unit[5] is None or datetime.now() + timedelta(hours=unit[2]) - unit[5] > timedelta(days=60):
-                start_date = (datetime.now() + timedelta(hours=unit[2]) - timedelta(days=60)).date()
+            if last_update is None or datetime.now() + timedelta(hours=tz_shift) - last_update > timedelta(days=60):
+                start_date = (datetime.now() + timedelta(hours=tz_shift) - timedelta(days=60)).date()
             else:
-                start_date = unit[5].date()
-            units_to_parse.append((unit[0], unit[1], unit[3], unit[4],
-                                   start_date, (datetime.now() + timedelta(hours=unit[2])).date()))
+                start_date = last_update.date()
+            units_to_parse.append((id_, unit_id, unit_name, login, password, start_date,
+                                   (datetime.now() + timedelta(hours=tz_shift)).date()))
 
         self._db_close()
 

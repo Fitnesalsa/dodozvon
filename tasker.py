@@ -30,7 +30,7 @@ class DatabaseTasker(DatabaseWorker):
         self._db.execute("""
             SELECT m.customer_id, u.tz_shift
             FROM units u
-            JOIN manager m on u.country_code = m.country_code and u.unit_id = m.unit_id
+            JOIN manager m on m.db_unit_id = u.id
             GROUP BY m.customer_id, u.tz_shift;
         """)
 
@@ -85,8 +85,8 @@ class DatabaseTasker(DatabaseWorker):
                     c.first_order_city,
                     c.first_order_datetime
                 FROM clients c
-                JOIN manager m ON c.unit_id = m.unit_id AND c.country_code = m.country_code
-                JOIN units u ON c.unit_id = u.unit_id AND c.country_code = u.country_code
+                JOIN units u ON c.db_unit_id = u.id
+                JOIN manager m ON m.db_unit_id = u.id
                 WHERE m.customer_id = %s 
                     AND u.tz_shift = %s
                     AND c.first_order_datetime >= date_trunc(

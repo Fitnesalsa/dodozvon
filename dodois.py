@@ -111,20 +111,20 @@ class DodoISParser:
 
 
 class DodoISStorer(DatabaseWorker):
-    def __init__(self, unit_id: int, db: Database = None):
+    def __init__(self, id_: int, db: Database = None):
         super().__init__(db)
-        self._unit_id = unit_id
+        self._id = id_
 
     def store(self, df: pd.DataFrame):
         params = []
         for row in df.iterrows():
-            params.append(('ru', self._unit_id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
+            params.append((self._id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
                            row[1]['Отдел первого заказа'], row[1]['Дата последнего заказа'],
                            row[1]['Отдел последнего заказа'], row[1]['first_order_type'], '', '', ''))
-        query = """INSERT INTO clients (country_code, unit_id, phone, first_order_datetime,
+        query = """INSERT INTO clients (db_unit_id, phone, first_order_datetime,
                    first_order_city, last_order_datetime, last_order_city, first_order_type, sms_text,
                    sms_text_city, ftp_path_city) VALUES %s
-                   ON CONFLICT (country_code, unit_id, phone) DO UPDATE
+                   ON CONFLICT (db_unit_id, phone) DO UPDATE
                    SET (last_order_datetime, last_order_city) = 
                    (EXCLUDED.last_order_datetime, EXCLUDED.last_order_city);
                    """
@@ -134,10 +134,7 @@ class DodoISStorer(DatabaseWorker):
         self._db.execute("""
         UPDATE auth
         SET last_update = now() AT TIME ZONE 'UTC'
-        FROM units
-        WHERE units.country_code = 'ru'
-        AND units.unit_id = %s
-        AND auth.unit_name = units.unit_name;
-        """, (self._unit_id,))
+        WHERE auth.db_unit_id = %s;
+        """, (self._id,))
 
         self._db_close()
