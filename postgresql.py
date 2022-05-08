@@ -36,7 +36,7 @@ class Database:
     def _create_table_units(self):
         self.execute("""
             CREATE TABLE IF NOT EXISTS units (
-                id SERIAL PRIMARY KEY,
+                id BIGSERIAL PRIMARY KEY,
                 country_code VARCHAR(2),
                 unit_id INTEGER,
                 uuid VARCHAR(32),
@@ -50,8 +50,8 @@ class Database:
         # first_order_type: 0 - Доставка, 1 - Самовывоз, 2 - Ресторан, 3 - Прочее
         self.execute("""
             CREATE TABLE IF NOT EXISTS clients (
-                id SERIAL PRIMARY KEY,
-                db_unit_id INTEGER,
+                id BIGSERIAL PRIMARY KEY,
+                db_unit_id BIGINT,
                 phone VARCHAR(20),
                 first_order_datetime TIMESTAMP WITH TIME ZONE,
                 first_order_city VARCHAR(30),
@@ -73,8 +73,8 @@ class Database:
         self.execute(
             """
             CREATE TABLE IF NOT EXISTS auth (
-                id SERIAL PRIMARY KEY,
-                db_unit_id INTEGER,
+                id BIGSERIAL PRIMARY KEY,
+                db_unit_id BIGINT,
                 login VARCHAR(256),
                 password VARCHAR(256),
                 is_active BOOLEAN,
@@ -90,8 +90,8 @@ class Database:
         self.execute(
             """
             CREATE TABLE IF NOT EXISTS manager (
-                id SERIAL PRIMARY KEY,
-                db_unit_id INTEGER,
+                id BIGSERIAL PRIMARY KEY,
+                db_unit_id BIGINT,
                 bot_id INTEGER,
                 customer_id INTEGER,
                 start_date DATE,
