@@ -3,19 +3,39 @@ import requests
 from parser import DatabaseWorker
 from postgresql import Database
 
+
 class DodoOpenAPIParser:
+    """
+    Метод обращается к публичному API Dodo (https://publicapi.dodois.io/ru/api/v1/unitinfo)
+    и возвращает результаты в виде словаря.
+    """
+
     def __init__(self):
+        """
+        Инициализация DodoOpenAPIParser(). Без параметров.
+        """
+        # создаём новую сессию
         self._session = requests.Session()
+        # сохраняем адрес API
         self._public_api_address = 'https://publicapi.dodois.io/ru/api/v1/unitinfo'
 
     def parse(self) -> dict:
+        """
+        Парсинг.
+        :return: словарь со значениями
+        """
+        # отправляем get-запрос на сервер и сохраняем ответ в переменную result
         result = self._session.get(self._public_api_address)
+        # закрываем сессию (чтобы не выдавались ошибки)
         self._session.close()
         # Читаем значение json-объекта
         return result.json()
 
 
 class DodoOpenAPIStorer(DatabaseWorker):
+    """
+    Метод ...
+    """
     def __init__(self, db: Database = None):
         super().__init__(db)
 
