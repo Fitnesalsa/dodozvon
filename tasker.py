@@ -93,7 +93,7 @@ class DatabaseTasker(DatabaseWorker):
                 WHERE m.customer_id = %s 
                     AND u.tz_shift = %s
                     AND c.first_order_datetime + interval '1 hour' * u.tz_shift >= date_trunc(
-                        'day', now() AT TIME ZONE 'UTC' + interval '1 hour' * u.tz_shift - interval '8 days')
+                        'day', now() AT TIME ZONE 'UTC' + interval '1 hour' * u.tz_shift - interval '6 days')
                     AND c.first_order_datetime + interval '1 hour' * u.tz_shift < date_trunc(
                         'day', now() AT TIME ZONE 'UTC' + interval '1 hour' * u.tz_shift)
             )
@@ -123,7 +123,7 @@ class DatabaseTasker(DatabaseWorker):
             df = df[['phone', 'promokod', 'city', 'pizzeria', 'otdel', 'first-order', 'source']]
 
             filename = f'{datetime.now(timezone.utc) + timedelta(hours=3):%d.%m.%Y}_NK_{source_str}Blok-{customer_id}_' \
-                       f'{datetime.now(timezone.utc) + timedelta(hours=tz_shift) - timedelta(days=8):%d.%m.%Y}-' \
+                       f'{datetime.now(timezone.utc) + timedelta(hours=tz_shift) - timedelta(days=7):%d.%m.%Y}-' \
                        f'{datetime.now(timezone.utc) + timedelta(hours=tz_shift) - timedelta(days=1):%d.%m.%Y}_tz-' \
                        f'{tz_shift - 3}.xlsx'
 
