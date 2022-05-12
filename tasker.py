@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 import requests
@@ -122,9 +122,9 @@ class DatabaseTasker(DatabaseWorker):
             # drop extra columns
             df = df[['phone', 'promokod', 'city', 'pizzeria', 'otdel', 'first-order', 'source']]
 
-            filename = f'{datetime.utcnow() + timedelta(hours=3):%d.%m.%Y}_NK_{source_str}Blok-{customer_id}_' \
-                       f'{datetime.utcnow() + timedelta(hours=tz_shift) - timedelta(days=8):%d.%m.%Y}-' \
-                       f'{datetime.utcnow() + timedelta(hours=tz_shift) - timedelta(days=1):%d.%m.%Y}_tz-' \
+            filename = f'{datetime.now(timezone.utc) + timedelta(hours=3):%d.%m.%Y}_NK_{source_str}Blok-{customer_id}_' \
+                       f'{datetime.now(timezone.utc) + timedelta(hours=tz_shift) - timedelta(days=8):%d.%m.%Y}-' \
+                       f'{datetime.now(timezone.utc) + timedelta(hours=tz_shift) - timedelta(days=1):%d.%m.%Y}_tz-' \
                        f'{tz_shift - 3}.xlsx'
 
             # save file, upload to Yandex Disk and delete

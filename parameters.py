@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from parser import DatabaseWorker
 from postgresql import Database
@@ -48,12 +48,13 @@ class ParametersGetter(DatabaseWorker):
             # отказались от первоначальной идеи вставить фильтр в базу данных, т.к. логика другая:
             # мы все равно парсим все активные юниты (is_active), и забираем их все из бд,
             # а после этого уже определяем для каждого юнита их start_date и end_date
-            if last_update is None or datetime.utcnow() + timedelta(hours=tz_shift) - last_update > timedelta(days=60):
-                start_date = (datetime.utcnow() + timedelta(hours=tz_shift) - timedelta(days=60)).date()
+            if last_update is None or \
+                    datetime.now(timezone.utc) + timedelta(hours=tz_shift) - last_update > timedelta(days=60):
+                start_date = (datetime.now(timezone.utc) + timedelta(hours=tz_shift) - timedelta(days=60)).date()
             else:
                 start_date = last_update.date()
             units_to_parse.append((id_, unit_id, unit_name, login, password, tz_shift, start_date,
-                                   (datetime.utcnow() + timedelta(hours=tz_shift)).date()))
+                                   (datetime.now(timezone.utc) + timedelta(hours=tz_shift)).date()))
 
         self._db_close()
 
