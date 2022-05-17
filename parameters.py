@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
+from typing import List, Tuple, Any
 
+from config import DELTA_DAYS
 from parser import DatabaseWorker
 from postgresql import Database
 
@@ -30,31 +32,61 @@ class ParametersGetter(DatabaseWorker):
         )
         return self._db.fetch()
 
+    @staticmethod
+    def _split_time_params(start_date: datetime, end_date: datetime, max_days: int = 30) -> list[tuple[datetime]]:
+        """
+        Генерирует серию параметров начальной и конечной даты для интервала, который больше заданного.
+        Пример:
+        _split_time_params(
+            start_date=datetime(year=2021, month=1, day=1),
+            end_date=datetime(year=2021, month=12, day=31),
+            max_days=30) = [
+                (datetime(year=2021, month=1, day=1), datetime(year=2021, month=1, day=30),
+                (datetime(year=2021, month=1, day=31), datetime(year=2021, month=3, day=1),
+                (datetime(year=2021, month=3, day=2), datetime(year=2021, month=3, day=31),
+                .....
+                (datetime(year=2021, month=12, day=27), datetime(year=2021, month=12, day=31)
+            ]
+        :param start_date: datetime, начало интервала
+        :param end_date: datetime, конец интервала
+        :param max_days: integer, максимальная длина интервала в днях
+        :return: список кортежей с двумя датами: начало и конец субинтервала включительно.
+        """
+        # проверка параметров
+        if start_date > end_date:
+            raise AttributeError('start_date cannot be later than end_date!')
+        if max_days < 1:
+            raise AttributeError('max_days cannot be zero or negative!')
+        result_dates = []
+        interval_start_date = start_date
+        interval_end_date = interval_start_date + timedelta(days=max_days)
+        while True:
+            if interval_end_date < end_date:
+                result_dates.append((interval_start_date, interval_end_date - timedelta(days=1)))
+                interval_start_date = interval_end_date
+                interval_end_date = interval_start_date + timedelta(days=max_days)
+            else:
+                result_dates.append((interval_start_date, end_date))
+                break
+        return result_dates
+
     def get_parsing_params(self) -> list:
         units_to_parse = []
         for (id_, unit_id, unit_name, tz_shift, login, password, last_update) in self._get_units_from_db():
-            # overall_start_date = полтора года назад datetime.now() + часовая зона - timedelta(days=548)
-            # overall_end_date = сегодня
-            # start_date = overall_start_date
-            # end_date = overall_start_date + timedelta(days=60)
-            # while start_date < overall_end_date:
-            #   if end_date > overall_end_date:
-            #       end_date = overall_end_date
-            #   выполняем основной код
-            #   start_date = end_date + timedelta(days=1)
-            #   end_date = start_date + timedelta(days=60)
-
-            # параметры start_date и end_date определяем на этом этапе;
-            # отказались от первоначальной идеи вставить фильтр в базу данных, т.к. логика другая:
-            # мы все равно парсим все активные юниты (is_active), и забираем их все из бд,
-            # а после этого уже определяем для каждого юнита их start_date и end_date
-            if last_update is None or \
-                    datetime.now(timezone.utc) + timedelta(hours=tz_shift) - last_update > timedelta(days=60):
-                start_date = (datetime.now(timezone.utc) + timedelta(hours=tz_shift) - timedelta(days=60)).date()
+            # местное время пиццерии
+            local_time = datetime.now(timezone.utc) + timedelta(hours=tz_shift)
+            # если никогда не обновляли или обновляли больше чем полтора года назад
+            if last_update is None or last_update + timedelta(days=DELTA_DAYS) < local_time:
+                # обновляем за полтора года
+                update_start_date = local_time - timedelta(days=DELTA_DAYS)
+            # если обновляли и меньше чем полтора года назад, обновляем с этого времени
             else:
-                start_date = last_update.date()
-            units_to_parse.append((id_, unit_id, unit_name, login, password, tz_shift, start_date,
-                                   (datetime.now(timezone.utc) + timedelta(hours=tz_shift)).date()))
+                update_start_date = last_update
+            # делим интервал на куски и сохраняем в список
+            for start_date, end_date in self._split_time_params(start_date=update_start_date,
+                                                                end_date=local_time - timedelta(days=1)):
+                units_to_parse.append((id_, unit_id, unit_name, login, password, tz_shift,
+                                       start_date.date(), end_date.date()))
 
         self._db_close()
 

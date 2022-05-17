@@ -18,6 +18,12 @@ class DodoAuthError(Exception):
     def __init__(self, message: str = 'Ошибка авторизации'):
         self.message = message
         super().__init__(self.message)
+        
+        
+class DodoResponseError(Exception):
+    def __init__(self, message: str = 'Ошибка выгрузки'):
+        self.message = message
+        super().__init__(self.message)
 
 
 class DodoEmptyExcelError(Exception):
@@ -80,8 +86,11 @@ class DodoISParser:
                                                 'hidePhoneNumbers': 'false'})
 
     def _read_response(self) -> pd.DataFrame:
-        result = io.BytesIO(self._response.content)
-        return pd.read_excel(result, skiprows=10, dtype='object')
+        if self._response.ok:
+            result = io.BytesIO(self._response.content)
+            return pd.read_excel(result, skiprows=10, dtype='object')
+        else:
+            raise DodoResponseError
 
     def _process_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
 
@@ -93,8 +102,8 @@ class DodoISParser:
         df['first_order_type'] = df['Направление первого заказа'].astype(order_type).cat.codes
 
         # Дата первого заказа лежит в переданном диапазоне, который совпадает с диапазоном выгрузки
-        df = df.drop(df[df['Дата первого заказа'].dt.date < self._start_date].index)
-        df = df.drop(df[df['Дата последнего заказа'].dt.date > self._end_date].index)
+        # df = df.drop(df[df['Дата первого заказа'].dt.date < self._start_date].index)
+        # df = df.drop(df[df['Дата последнего заказа'].dt.date > self._end_date].index)
 
         # Сохраняем tz в даты
         df['Дата первого заказа'] = df['Дата первого заказа'].dt.tz_localize(self._this_timezone)

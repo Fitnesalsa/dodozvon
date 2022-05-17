@@ -133,10 +133,13 @@ class Database:
         DELETE FROM clients
         USING units
         WHERE clients.db_unit_id = units.id 
-        AND date_trunc('day', first_order_datetime + interval '60 days') 
+        AND date_trunc('day', first_order_datetime + interval '%s days') 
               < date_trunc('day', now() AT TIME ZONE 'UTC' + interval '1 hour' * units.tz_shift);
         """
-        self.execute(query)
+        self.execute(query, (config.DELTA_DAYS,))
+
+    def commit(self):
+        self._conn.commit()
 
     def close(self):
         # Make the changes to the database persistent
