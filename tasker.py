@@ -74,16 +74,16 @@ class DatabaseTasker(DatabaseWorker):
                     c.phone,
                     c.first_order_type,
                     (case 
-                        when c.first_order_type = 0 then m.source_deliv
-                        when c.first_order_type = 1 then m.source_pickup
-                        when c.first_order_type = 2 then m.source_rest
+                        when c.first_order_type = 0 then m.new_source_deliv
+                        when c.first_order_type = 1 then m.new_source_pickup
+                        when c.first_order_type = 2 then m.new_source_rest
                     end) as source,
                     (case 
-                        when c.first_order_type = 0 then m.promo_deliv
-                        when c.first_order_type = 1 then m.promo_pickup
-                        when c.first_order_type = 2 then m.promo_rest
+                        when c.first_order_type = 0 then m.new_promo_deliv
+                        when c.first_order_type = 1 then m.new_promo_pickup
+                        when c.first_order_type = 2 then m.new_promo_rest
                     end) as promocode,
-                    m.city,
+                    m.new_city,
                     m.pizzeria,
                     c.first_order_city,
                     c.first_order_datetime
@@ -92,8 +92,14 @@ class DatabaseTasker(DatabaseWorker):
                 JOIN manager m ON m.db_unit_id = u.id
                 WHERE m.customer_id = %s 
                     AND u.tz_shift = %s
-                    AND c.first_order_datetime + interval '1 hour' * u.tz_shift >= date_trunc(
-                        'day', now() AT TIME ZONE 'UTC' + interval '1 hour' * u.tz_shift - interval '6 days')
+                    AND c.first_order_city = u.unit_name
+                    AND c.last_order_city = u.unit_name
+                    AND c.first_order_datetime + interval '1 hour' * u.tz_shift >= 
+                        coalesce(
+                            m.new_start_date,
+                            date_trunc('day', now() AT TIME ZONE 'UTC' + interval '1 hour' * 
+                                                                         u.tz_shift - interval '6 days')
+                        )
                     AND c.first_order_datetime + interval '1 hour' * u.tz_shift < date_trunc(
                         'day', now() AT TIME ZONE 'UTC' + interval '1 hour' * u.tz_shift)
             )

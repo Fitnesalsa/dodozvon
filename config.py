@@ -19,6 +19,7 @@ CONNECT_TIMEOUT = 180
 PARSE_ATTEMPTS = 5
 
 DELTA_DAYS = 550
+LOST_DURATION = 30   # продолжительность 1 месяца для расчета сдвига для выгрузки пропавших клиентов
 
 TIMEZONES = {
     2: 'Europe/Kaliningrad',
