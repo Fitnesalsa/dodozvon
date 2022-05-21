@@ -1,8 +1,6 @@
-import time
 from zipfile import BadZipFile
 
 from bot import Bot
-from config import PARSE_ATTEMPTS
 from dodo_openapi import DodoOpenAPIParser, DodoOpenAPIStorer
 from dodois import DodoISParser, DodoISStorer, DodoAuthError, DodoEmptyExcelError, DodoResponseError
 from parameters import ParametersGetter
@@ -27,21 +25,16 @@ def run():
 
     # передаем парсеру клиентской статистики
     for (id_, *params_set) in params:  # (unit_id, unit_name, login... )
-        attempts = PARSE_ATTEMPTS
-        while attempts > 0:
-            attempts -= 1
-            try:
-                print(f'parsing id {id_}, params {params_set}...')
-                dodois_parser = DodoISParser(*params_set)
-                dodois_storer = DodoISStorer(id_, db=db)
-                dodois_result = dodois_parser.parse()
-                dodois_storer.store(dodois_result)
-                attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
-            except (ValueError, BadZipFile) as e:
-                bot.send_message(f'{params_set[1]}: Что-то пошло не так ({e}) , еще попыток: {attempts}')
-            except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
-                bot.send_message(f'{params_set[1]}: {e.message}; еще попыток: {attempts}')
-            time.sleep(2)  # ну на всякий случай, дадим серверу отдохнуть
+        try:
+            print(f'parsing id {id_}, params {params_set}...')
+            dodois_parser = DodoISParser(*params_set)
+            dodois_storer = DodoISStorer(id_, db=db)
+            dodois_result = dodois_parser.parse()
+            dodois_storer.store(dodois_result)
+        except (ValueError, BadZipFile) as e:
+            bot.send_message(f'{params_set[1]}: Что-то пошло не так ({e})')
+        except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
+            bot.send_message(f'{params_set[1]}: {e.message}')
 
     # чистим бд
     db.clean()

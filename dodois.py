@@ -1,7 +1,7 @@
 import io
 import random
-import re
-from datetime import datetime
+import time
+from datetime import datetime, timedelta
 
 import pandas as pd
 import requests
@@ -63,6 +63,44 @@ class DodoISParser:
         self._tz_shift = tz_shift
         self._this_timezone = config.TIMEZONES[self._tz_shift]
 
+    @staticmethod
+    def _split_time_params(start_date: datetime, end_date: datetime, max_days: int = 30) -> list[tuple[datetime]]:
+        """
+        Генерирует серию параметров начальной и конечной даты для интервала, который больше заданного.
+        Пример:
+        _split_time_params(
+            start_date=datetime(year=2021, month=1, day=1),
+            end_date=datetime(year=2021, month=12, day=31),
+            max_days=30) = [
+                (datetime(year=2021, month=1, day=1), datetime(year=2021, month=1, day=30),
+                (datetime(year=2021, month=1, day=31), datetime(year=2021, month=3, day=1),
+                (datetime(year=2021, month=3, day=2), datetime(year=2021, month=3, day=31),
+                .....
+                (datetime(year=2021, month=12, day=27), datetime(year=2021, month=12, day=31)
+            ]
+        :param start_date: datetime, начало интервала
+        :param end_date: datetime, конец интервала
+        :param max_days: integer, максимальная длина интервала в днях
+        :return: список кортежей с двумя датами: начало и конец субинтервала включительно.
+        """
+        # проверка параметров
+        if start_date > end_date:
+            raise AttributeError('start_date cannot be later than end_date!')
+        if max_days < 1:
+            raise AttributeError('max_days cannot be zero or negative!')
+        result_dates = []
+        interval_start_date = start_date
+        interval_end_date = interval_start_date + timedelta(days=max_days)
+        while True:
+            if interval_end_date < end_date:
+                result_dates.append((interval_start_date, interval_end_date - timedelta(days=1)))
+                interval_start_date = interval_end_date
+                interval_end_date = interval_start_date + timedelta(days=max_days)
+            else:
+                result_dates.append((interval_start_date, end_date))
+                break
+        return result_dates
+
     def _auth(self) -> None:
         if not self._authorized:
             response = self._session.post('https://auth.dodopizza.ru/Authenticate/LogOn',
@@ -75,14 +113,14 @@ class DodoISParser:
             elif response.url == 'https://auth.dodopizza.ru/Authenticate/LogOn':
                 raise DodoAuthError('Ошибка авторизации. Проверьте правильность данных.')
 
-    def _parse_report(self) -> None:
+    def _parse_report(self, start_date: datetime, end_date: datetime) -> None:
         if not self._authorized:
             self._auth()
         self._response = self._session.post('https://officemanager.dodopizza.ru/Reports/ClientsStatistic/Export',
                                             data={
                                                 'unitsIds': self._unit_id,
-                                                'beginDate': self._start_date.strftime('%d.%m.%Y'),
-                                                'endDate': self._end_date.strftime('%d.%m.%Y'),
+                                                'beginDate': start_date.strftime('%d.%m.%Y'),
+                                                'endDate': end_date.strftime('%d.%m.%Y'),
                                                 'hidePhoneNumbers': 'false'})
 
     def _read_response(self) -> pd.DataFrame:
@@ -114,20 +152,56 @@ class DodoISParser:
         df['Дата последнего заказа'] = df['Дата последнего заказа'].dt.tz_convert('UTC')
 
         # Отдел соответствует отделу первого И последнего заказа
-        city_name = re.match(r'([А-Яа-я -]+)[ -][0-9 -]+', self._unit_name).group(1)
-        df = df.drop(df[~df['Отдел первого заказа'].str.startswith(city_name)].index)
-        df = df.drop(df[~df['Отдел последнего заказа'].str.startswith(city_name)].index)
+        # city_name = re.match(r'([А-Яа-я -]+)[ -][0-9 -]+', self._unit_name).group(1)
+        # df = df.drop(df[~df['Отдел первого заказа'].str.startswith(city_name)].index)
+        # df = df.drop(df[~df['Отдел последнего заказа'].str.startswith(city_name)].index)
 
         # Номер начинается на +79
         df = df.drop(df[~df['№ телефона'].str.startswith('+79')].index)
 
+        # Удаляем лишние столбцы
+        df = df[['№ телефона', 'Дата первого заказа', 'Отдел первого заказа', 'Дата последнего заказа',
+                 'Отдел последнего заказа', 'first_order_type', 'Кол-во заказов', 'Сумма заказа']]
+
+        return df
+
+    @staticmethod
+    def _concatenate(dfs: list[pd.DataFrame]) -> pd.DataFrame:
+        df = pd.concat(dfs)
+        groupby_cols = ['№ телефона', 'Дата первого заказа', 'Отдел первого заказа', 'first_order_type']
+        agg_dict = {
+            'Дата последнего заказа': 'max',
+            'Отдел последнего заказа': 'max',
+            'Кол-во заказов': 'sum',
+            'Сумма заказа': 'sum'
+        }
+        df = df.groupby(groupby_cols, as_index=False).agg(agg_dict)
         return df
 
     def parse(self) -> pd.DataFrame:
-        self._parse_report()
-        df = self._read_response()
+        dfs = []
+        for start_date, end_date in self._split_time_params(self._start_date, self._end_date):
+            attempts = config.PARSE_ATTEMPTS
+            while attempts > 0:
+                attempts -= 1
+                try:
+                    self._parse_report(start_date, end_date)
+                    df = self._read_response()
+                    dfs.append(self._process_dataframe(df))
+                    attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
+                except DodoEmptyExcelError:
+                    if end_date < self._end_date:  # если пиццерия открылась после начала срока, не выдаем ошибку
+                        continue
+                    else:
+                        if attempts == 0:
+                            raise DodoEmptyExcelError
+                        time.sleep(2)
+                except Exception as e:
+                    if attempts == 0:
+                        raise e
+                    time.sleep(2)
         self._session.close()
-        return self._process_dataframe(df)
+        return self._concatenate(dfs)
 
 
 class DodoISStorer(DatabaseWorker):
@@ -140,13 +214,16 @@ class DodoISStorer(DatabaseWorker):
         for row in df.iterrows():
             params.append((self._id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
                            row[1]['Отдел первого заказа'], row[1]['Дата последнего заказа'],
-                           row[1]['Отдел последнего заказа'], row[1]['first_order_type'], '', '', ''))
-        query = """INSERT INTO clients (db_unit_id, phone, first_order_datetime,
-                   first_order_city, last_order_datetime, last_order_city, first_order_type, sms_text,
-                   sms_text_city, ftp_path_city) VALUES %s
+                           row[1]['Отдел последнего заказа'], row[1]['first_order_type'],
+                           row[1]['Кол-во заказов'], row[1]['Сумма заказа'], '', '', ''))
+        query = """INSERT INTO clients (db_unit_id, phone, first_order_datetime, first_order_city, 
+                   last_order_datetime, last_order_city, first_order_type, orders_amt, orders_sum,
+                   sms_text, sms_text_city, ftp_path_city) VALUES %s
                    ON CONFLICT (db_unit_id, phone) DO UPDATE
-                   SET (last_order_datetime, last_order_city) = 
-                   (EXCLUDED.last_order_datetime, EXCLUDED.last_order_city);
+                   SET (last_order_datetime, last_order_city, orders_amt, orders_sum) = 
+                   (EXCLUDED.last_order_datetime, EXCLUDED.last_order_city, 
+                   EXCLUDED.orders_amt + clients.orders_amt,
+                   EXCLUDED.orders_sum + clients.orders_sum);
                    """
         self._db.execute(query, params)
 

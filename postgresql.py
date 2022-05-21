@@ -40,7 +40,7 @@ class Database:
                 country_code VARCHAR(2),
                 unit_id INTEGER,
                 uuid VARCHAR(32),
-                unit_name VARCHAR(30),
+                unit_name VARCHAR(40),
                 tz_shift INTEGER,
                 UNIQUE (country_code, unit_id)
             );
@@ -54,10 +54,12 @@ class Database:
                 db_unit_id BIGINT,
                 phone VARCHAR(20),
                 first_order_datetime TIMESTAMP WITH TIME ZONE,
-                first_order_city VARCHAR(30),
+                first_order_city VARCHAR(40),
                 last_order_datetime TIMESTAMP WITH TIME ZONE,
-                last_order_city VARCHAR(30),
+                last_order_city VARCHAR(40),
                 first_order_type INTEGER,
+                orders_amt INTEGER,
+                orders_sum INTEGER,
                 sms_text VARCHAR(150),
                 sms_text_city VARCHAR(30),
                 ftp_path_city VARCHAR(15),
@@ -137,9 +139,6 @@ class Database:
               < date_trunc('day', now() AT TIME ZONE 'UTC' + interval '1 hour' * units.tz_shift);
         """
         self.execute(query, (config.DELTA_DAYS,))
-
-    def commit(self):
-        self._conn.commit()
 
     def close(self):
         # Make the changes to the database persistent
