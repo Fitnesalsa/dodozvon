@@ -131,10 +131,7 @@ class Database:
             self._cur.execute(query, argslist)
 
     def fetch(self, one: bool = False) -> Union[tuple, list]:
-        if not one:
-            return self._cur.fetchall()
-        if one:
-            return self._cur.fetchone()
+        return self._cur.fetchone() if one else self._cur.fetchall()
 
     def clean(self):
         query = """
