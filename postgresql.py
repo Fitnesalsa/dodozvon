@@ -32,6 +32,8 @@ class Database:
         self._create_table_clients()
         self._create_table_auth()
         self._create_table_manager()
+        self._create_table_stop_list()
+        self._create_table_config()
 
     def _create_table_units(self):
         self.execute("""
@@ -123,6 +125,25 @@ class Database:
                         ON DELETE CASCADE
             );
             """)
+
+    def _create_table_stop_list(self):
+        self.execute("""
+            CREATE TABLE IF NOT EXISTS stop_list(
+            id BIGSERIAL PRIMARY KEY,
+            phone VARCHAR(20) UNIQUE,
+            last_call_date TIMESTAMP WITH TIME ZONE,
+            do_not_call BOOLEAN
+            );
+        """)
+
+    def _create_table_config(self):
+        self.execute("""
+            CREATE TABLE IF NOT EXISTS config (
+                id BIGSERIAL PRIMARY KEY,
+                parameter VARCHAR(100),
+                value VARCHAR(100)
+            );
+        """)
 
     def execute(self, query: str, argslist: Union[list, tuple] = None):
         if argslist and len(argslist) > 1 and query.count('%s') == 1:

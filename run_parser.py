@@ -3,6 +3,7 @@ from zipfile import BadZipFile
 from bot import Bot
 from dodo_openapi import DodoOpenAPIParser, DodoOpenAPIStorer
 from dodois import DodoISParser, DodoISStorer, DodoAuthError, DodoEmptyExcelError, DodoResponseError
+from feedback import FeedbackParser, FeedbackStorer
 from parameters import ParametersGetter
 from postgresql import Database
 
@@ -26,7 +27,7 @@ def run():
     # передаем парсеру клиентской статистики
     for (id_, *params_set) in params:  # (unit_id, unit_name, login... )
         try:
-            print(f'parsing id {id_}, params {params_set}...')
+            # print(f'parsing id {id_}, params {params_set}...')
             dodois_parser = DodoISParser(*params_set)
             dodois_storer = DodoISStorer(id_, db=db)
             dodois_result = dodois_parser.parse()
@@ -35,6 +36,13 @@ def run():
             bot.send_message(f'{params_set[1]}: Что-то пошло не так ({e})')
         except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
             bot.send_message(f'{params_set[1]}: {e.message}')
+
+    # обновляем таблицы с фидбеком
+    stop_list_last_modified_date = params_getter.get_config_param('StopListLastModifiedDate')
+    feedback_parser = FeedbackParser()
+    feedback_storer = FeedbackStorer(db=db)
+    feedback_result = feedback_parser.parse(stop_list_last_modified_date)
+    feedback_storer.store(*feedback_result)
 
     # чистим бд
     db.clean()

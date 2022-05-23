@@ -48,6 +48,13 @@ class ParametersGetter(DatabaseWorker):
             units_to_parse.append((id_, unit_id, unit_name, login, password, tz_shift,
                                    start_date.date(), end_date.date()))
 
-        self._db_close()
-
         return units_to_parse
+
+    def get_config_param(self, parameter: str):
+        self._db.execute("""
+            SELECT value 
+            FROM config
+            WHERE parameter = %s;
+        """, (parameter,))
+
+        return self._db.fetch(one=True)

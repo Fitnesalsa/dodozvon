@@ -2,28 +2,17 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
-import requests
 
 import config
-from config import YANDEX_API_TOKEN, YANDEX_NEW_CLIENTS_FOLDER, YANDEX_LOST_CLIENTS_FOLDER
+from storage import YandexDisk
+from config import YANDEX_NEW_CLIENTS_FOLDER, YANDEX_LOST_CLIENTS_FOLDER
 from parser import DatabaseWorker
 from postgresql import Database
 
 
-class YandexUploadError(Exception):
-    def __init__(self, filename: str, upload_response: dict):
-        self.message = f'Ошибка при загрузке на диск. Файл: {filename}, ответ: {upload_response}'
-        super().__init__(self.message)
-
-
-class YandexCreateFolderError(Exception):
-    def __init__(self, filename: str, upload_response: dict):
-        self.message = f'Ошибка при создании папки {YANDEX_NEW_CLIENTS_FOLDER}, ответ: {upload_response}'
-        super().__init__(self.message)
-
-
 class DatabaseTasker(DatabaseWorker):
     def __init__(self, db: Database = None):
+        self._storage = YandexDisk()
         super().__init__(db)
 
     def _get_query_pairs(self):
@@ -48,32 +37,6 @@ class DatabaseTasker(DatabaseWorker):
             AND u.tz_shift = %s;
         """, (customer_id, tz_shift))
         return self._db.fetch()
-
-    @staticmethod
-    def _yandex_upload(filename: str, folder: str):
-        request_url = 'https://cloud-api.yandex.net/v1/disk/resources'
-        headers = {'Content-Type': 'application/json',
-                   'Accept': 'application/json',
-                   'Authorization': f'OAuth {YANDEX_API_TOKEN}'}
-
-        # check if folder exists
-        check_folder_response = requests.get(f'{request_url}?path=%2F{folder}',
-                                             headers=headers).json()
-        if check_folder_response.get('error') == 'DiskNotFoundError':
-            # create folder
-            put_folder_response = requests.put(f'{request_url}?path=%2F{folder}',
-                                               headers=headers).json()
-            if 'error' in put_folder_response.keys():
-                raise YandexCreateFolderError
-
-        # upload file
-        upload_response = requests.get(f'{request_url}/upload?path=%2F{folder}%2F{filename}'
-                                       f'&overwrite=true', headers=headers).json()
-        with open(filename, 'rb') as f:
-            try:
-                requests.put(upload_response['href'], files={'file': f})
-            except KeyError:
-                raise YandexUploadError(filename, upload_response)
 
     def create_new_clients_tables(self):
         pairs = self._get_query_pairs()
@@ -145,7 +108,7 @@ class DatabaseTasker(DatabaseWorker):
 
             # save file, upload to Yandex Disk and delete
             df.to_excel(filename, index=False)
-            self._yandex_upload(filename, YANDEX_NEW_CLIENTS_FOLDER)
+            self._storage.upload(filename, YANDEX_NEW_CLIENTS_FOLDER)
             os.remove(filename)
 
     def create_lost_clients_tables(self):
@@ -224,5 +187,5 @@ class DatabaseTasker(DatabaseWorker):
 
             # save file, upload to Yandex Disk and delete
             df.to_excel(filename, index=False)
-            self._yandex_upload(filename, YANDEX_LOST_CLIENTS_FOLDER)
+            self._storage.upload(filename, YANDEX_LOST_CLIENTS_FOLDER)
             os.remove(filename)
