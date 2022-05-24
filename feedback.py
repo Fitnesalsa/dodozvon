@@ -23,9 +23,13 @@ class FeedbackParser:
         if last_modified_date < stop_list_modified_date:
             # читаем и сохраняем файл
             fh = self._storage.download(filename)
-            df = pd.read_excel(fh)
+            # with open('MainBase.xlsm', 'wb') as file:
+            #     file.write(fh)
+            # with open('MainBase.xlsm', 'rb') as fh:
+            df = pd.read_excel(fh, dtype='object')
             df['stop_list'] = df['forbiden'].str.len() > 0
             df = df[['Телефон', 'Дата завершения', 'stop_list']]
+            df['Дата завершения'] = pd.to_datetime(df['Дата завершения'])
             df = df.groupby(['Телефон'], as_index=False).agg({'Дата завершения': 'max', 'stop_list': 'max'})
             return last_modified_date, df
         return None
@@ -40,13 +44,16 @@ class FeedbackStorer(DatabaseWorker):
         params = []
         for row in df.iterrows():
             params.append((row[1]['Телефон'], row[1]['Дата завершения'], row[1]['stop_list']))
-        query = """
-            INSERT INTO stop_list (phone, last_call_date, do_not_call) VALUES %s
-            ON CONFLICT (phone) DO UPDATE 
-            SET (last_call_date, do_not_call) = (EXCLUDED.last_call_date, EXCLUDED.do_not_call);
-        """
-        self._db.execute(query, params)
+        if len(params) > 0:
+            query = """
+                INSERT INTO stop_list (phone, last_call_date, do_not_call) VALUES %s
+                ON CONFLICT (phone) DO UPDATE 
+                SET (last_call_date, do_not_call) = (EXCLUDED.last_call_date, EXCLUDED.do_not_call);
+            """
+            self._db.execute(query, params)
 
         # сохраняем дату
-        self._db.execute('UPDATE config SET value = %s WHERE parameter = "StopListLastModifiedDate";',
-                         (last_modified_date,))
+        self._db.execute("""
+            INSERT INTO config (parameter, value) VALUES (%s, %s)
+            ON CONFLICT (parameter) DO UPDATE SET value = EXCLUDED.value;
+            """, ('StopListLastModifiedDate', last_modified_date.strftime('%Y-%m-%dT%H:%M:%S%z')))

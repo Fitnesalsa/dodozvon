@@ -140,7 +140,7 @@ class Database:
         self.execute("""
             CREATE TABLE IF NOT EXISTS config (
                 id BIGSERIAL PRIMARY KEY,
-                parameter VARCHAR(100),
+                parameter VARCHAR(100) UNIQUE,
                 value VARCHAR(100)
             );
         """)

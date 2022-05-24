@@ -63,6 +63,7 @@ class DatabaseTasker(DatabaseWorker):
                 FROM clients c
                 JOIN units u ON c.db_unit_id = u.id
                 JOIN manager m ON m.db_unit_id = u.id
+                LEFT JOIN stop_list sl ON c.phone = sl.phone
                 WHERE m.customer_id = %s 
                     AND u.tz_shift = %s
                     AND c.first_order_city = u.unit_name
@@ -75,6 +76,10 @@ class DatabaseTasker(DatabaseWorker):
                         )
                     AND c.first_order_datetime + interval '1 hour' * u.tz_shift < date_trunc(
                         'day', now() AT TIME ZONE 'UTC' + interval '1 hour' * u.tz_shift)
+                    AND (sl.last_call_date IS NULL
+                         OR now() AT TIME ZONE 'UTC' + interval '1 hour' * u.tz_shift - sl.last_call_date > 
+                            interval '180 days')
+                    AND (sl.do_not_call IS NULL OR NOT sl.do_not_call)
             )
             SELECT * FROM pair_table
             WHERE source IS NOT NULL
@@ -151,6 +156,7 @@ class DatabaseTasker(DatabaseWorker):
                 FROM clients c
                 JOIN units u ON c.db_unit_id = u.id
                 JOIN manager m ON m.db_unit_id = u.id
+                LEFT JOIN stop_list sl on c.phone = sl.phone
                 WHERE m.customer_id = %s 
                     AND u.tz_shift = %s
                     AND u.id = %s
@@ -159,7 +165,11 @@ class DatabaseTasker(DatabaseWorker):
                     AND c.first_order_city = u.unit_name
                     AND c.last_order_city = u.unit_name
                     AND c.last_order_datetime + interval '1 hour' * u.tz_shift >= %s
-                    AND c.first_order_datetime + interval '1 hour' * u.tz_shift < %s;
+                    AND c.first_order_datetime + interval '1 hour' * u.tz_shift < %s
+                    AND (sl.last_call_date IS NULL
+                         OR now() AT TIME ZONE 'UTC' + interval '1 hour' * u.tz_shift - sl.last_call_date > 
+                            interval '180 days')
+                    AND (sl.do_not_call IS NULL OR NOT sl.do_not_call);
                 """, (customer_id, tz_shift, unit_id, report_start_date, report_end_date))
 
                 table = self._db.fetch()

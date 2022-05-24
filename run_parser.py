@@ -1,4 +1,7 @@
+from datetime import datetime
 from zipfile import BadZipFile
+
+import pandas as pd
 
 from bot import Bot
 from dodo_openapi import DodoOpenAPIParser, DodoOpenAPIStorer
@@ -42,7 +45,8 @@ def run():
     feedback_parser = FeedbackParser()
     feedback_storer = FeedbackStorer(db=db)
     feedback_result = feedback_parser.parse(stop_list_last_modified_date)
-    feedback_storer.store(*feedback_result)
+    if feedback_result:
+        feedback_storer.store(*feedback_result)
 
     # чистим бд
     db.clean()
