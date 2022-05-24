@@ -17,7 +17,7 @@ class FeedbackParser:
         filename = 'main_base/MainBase.xlsm'
         stop_list_modified_date = self._storage.get_modified_date(filename)
         try:
-            last_modified_date = datetime.strptime(last_modified_date, '%Y-%m-%dT%H:%M:%S%z')
+            last_modified_date = datetime.strptime(last_modified_date[0], '%Y-%m-%dT%H:%M:%S%z')
         except TypeError:
             last_modified_date = datetime(1970, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         if last_modified_date < stop_list_modified_date:
