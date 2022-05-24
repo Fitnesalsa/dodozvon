@@ -23,15 +23,12 @@ class FeedbackParser:
         if last_modified_date < stop_list_modified_date:
             # читаем и сохраняем файл
             fh = self._storage.download(filename)
-            # with open('MainBase.xlsm', 'wb') as file:
-            #     file.write(fh)
-            # with open('MainBase.xlsm', 'rb') as fh:
             df = pd.read_excel(fh, dtype='object')
             df['stop_list'] = df['forbiden'].str.len() > 0
             df = df[['Телефон', 'Дата завершения', 'stop_list']]
             df['Дата завершения'] = pd.to_datetime(df['Дата завершения'])
             df = df.groupby(['Телефон'], as_index=False).agg({'Дата завершения': 'max', 'stop_list': 'max'})
-            return last_modified_date, df
+            return stop_list_modified_date, df
         return None
 
 
