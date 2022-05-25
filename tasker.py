@@ -68,6 +68,7 @@ class DatabaseTasker(DatabaseWorker):
                     AND u.tz_shift = %s
                     AND c.first_order_city = u.unit_name
                     AND c.last_order_city = u.unit_name
+                    AND m.new_shop_exclude = false
                     AND c.first_order_datetime + interval '1 hour' * u.tz_shift >= 
                         coalesce(
                             m.new_start_date,
@@ -164,6 +165,7 @@ class DatabaseTasker(DatabaseWorker):
                     AND c.orders_amt > 2
                     AND c.first_order_city = u.unit_name
                     AND c.last_order_city = u.unit_name
+                    AND m.lost_shop_exclude = false
                     AND c.last_order_datetime + interval '1 hour' * u.tz_shift >= %s
                     AND c.first_order_datetime + interval '1 hour' * u.tz_shift < %s
                     AND (sl.last_call_date IS NULL
