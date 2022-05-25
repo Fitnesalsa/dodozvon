@@ -167,7 +167,7 @@ class DodoISParser:
         return df
 
     @staticmethod
-    def _concatenate(dfs: list[pd.DataFrame]) -> pd.DataFrame:
+    def _concatenate(dfs: List[pd.DataFrame]) -> pd.DataFrame:
         df = pd.concat(dfs)
         groupby_cols = ['№ телефона', 'Дата первого заказа', 'Отдел первого заказа', 'first_order_type']
         agg_dict = {
