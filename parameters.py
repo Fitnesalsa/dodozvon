@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import List
 
 from config import DELTA_DAYS
 from parser import DatabaseWorker
@@ -14,7 +15,7 @@ class ParametersGetter(DatabaseWorker):
     def __init__(self, db: Database = None):
         super().__init__(db)
 
-    def _get_units_from_db(self) -> list:
+    def _get_units_from_db(self) -> List:
         """
         Возвращает все активные юниты из таблицы auth
         :return: список параметров для каждого активного юнита
@@ -31,7 +32,7 @@ class ParametersGetter(DatabaseWorker):
         )
         return self._db.fetch()
 
-    def get_parsing_params(self) -> list:
+    def get_parsing_params(self) -> List:
         units_to_parse = []
         for (id_, unit_id, unit_name, tz_shift, login, password, last_update) in self._get_units_from_db():
             # местное время пиццерии

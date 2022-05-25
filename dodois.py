@@ -2,6 +2,7 @@ import io
 import random
 import time
 from datetime import datetime, timedelta
+from typing import List, Tuple
 
 import pandas as pd
 import requests
@@ -64,7 +65,7 @@ class DodoISParser:
         self._this_timezone = config.TIMEZONES[self._tz_shift]
 
     @staticmethod
-    def _split_time_params(start_date: datetime, end_date: datetime, max_days: int = 30) -> list[tuple[datetime]]:
+    def _split_time_params(start_date: datetime, end_date: datetime, max_days: int = 30) -> List[Tuple[datetime]]:
         """
         Генерирует серию параметров начальной и конечной даты для интервала, который больше заданного.
         Пример:

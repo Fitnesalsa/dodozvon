@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Union
+from typing import Union, Tuple
 
 import pandas as pd
 
@@ -13,7 +13,7 @@ class FeedbackParser:
     def __init__(self):
         self._storage = YandexDisk()
 
-    def parse(self, last_modified_date: Union[str, None]) -> Union[None, tuple[datetime, pd.DataFrame]]:
+    def parse(self, last_modified_date: Union[str, None]) -> Union[None, Tuple[datetime, pd.DataFrame]]:
         filename = 'main_base/MainBase.xlsm'
         stop_list_modified_date = self._storage.get_modified_date(filename)
         try:

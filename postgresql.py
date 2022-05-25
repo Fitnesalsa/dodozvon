@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List, Tuple
 
 import psycopg2
 from psycopg2.extras import execute_values
@@ -145,13 +145,13 @@ class Database:
             );
         """)
 
-    def execute(self, query: str, argslist: Union[list, tuple] = None):
+    def execute(self, query: str, argslist: Union[List, Tuple] = None):
         if argslist and len(argslist) > 1 and query.count('%s') == 1:
             execute_values(self._cur, query, argslist)
         else:
             self._cur.execute(query, argslist)
 
-    def fetch(self, one: bool = False) -> Union[tuple, list]:
+    def fetch(self, one: bool = False) -> Union[Tuple, List]:
         return self._cur.fetchone() if one else self._cur.fetchall()
 
     def clean(self):

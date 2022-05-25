@@ -1,3 +1,5 @@
+from typing import Dict
+
 import requests
 
 from parser import DatabaseWorker
@@ -19,7 +21,7 @@ class DodoOpenAPIParser:
         # сохраняем адрес API
         self._public_api_address = 'https://publicapi.dodois.io/ru/api/v1/unitinfo'
 
-    def parse(self) -> dict:
+    def parse(self) -> Dict:
         """
         Парсинг.
         :return: словарь со значениями
