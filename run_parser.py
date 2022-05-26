@@ -30,7 +30,7 @@ def run():
     # передаем парсеру клиентской статистики
     for (id_, *params_set) in params:  # (unit_id, unit_name, login... )
         try:
-            # print(f'parsing id {id_}, params {params_set}...')
+            print(f'parsing id {id_}, params {params_set}...')
             dodois_parser = DodoISParser(*params_set)
             dodois_storer = DodoISStorer(id_, db=db)
             dodois_result = dodois_parser.parse()
