@@ -9,7 +9,7 @@ def run():
 
     try:
         db_tasker = DatabaseTasker()
-        # db_tasker.create_new_clients_tables()
+        db_tasker.create_new_clients_tables()
         db_tasker.create_lost_clients_tables()
         db_tasker.db_close()
     except (YandexCreateFolderError, YandexUploadError, YandexFileNotFound) as e:
