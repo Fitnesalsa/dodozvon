@@ -203,5 +203,5 @@ class DatabaseTasker(DatabaseWorker):
                     prev_new_idx = idx + 1
                     # save file, upload to Yandex Disk and delete
                     df.to_excel(filename, index=False)
-                    # self._storage.upload(filename, YANDEX_LOST_CLIENTS_FOLDER)
-                    # os.remove(filename)
+                    self._storage.upload(filename, YANDEX_LOST_CLIENTS_FOLDER)
+                    os.remove(filename)
