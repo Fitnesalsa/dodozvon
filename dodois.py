@@ -235,4 +235,4 @@ class DodoISStorer(DatabaseWorker):
         WHERE auth.db_unit_id = %s;
         """, (self._id,))
 
-        self._db_close()
+        self.db_close()

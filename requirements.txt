@@ -3,3 +3,4 @@ requests
 pandas
 psycopg2
 openpyxl
+python-dateutil

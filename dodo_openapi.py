@@ -53,4 +53,4 @@ class DodoOpenAPIStorer(DatabaseWorker):
         # И отправляем всё одним запросом на сервер, иначе это занимает очень много времени
         self._db.execute(query, params)
 
-        self._db_close()
+        self.db_close()

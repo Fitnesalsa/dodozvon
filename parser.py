@@ -16,7 +16,7 @@ class DatabaseWorker:
             self._db = db
             self._external_db = True
 
-    def _db_close(self):
+    def db_close(self):
         """
         Метод закрывает соединения с БД
         """

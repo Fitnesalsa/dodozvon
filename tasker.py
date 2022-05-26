@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 
 import config
 from storage import YandexDisk
@@ -15,31 +16,33 @@ class DatabaseTasker(DatabaseWorker):
         self._storage = YandexDisk()
         super().__init__(db)
 
-    def _get_query_pairs(self):
+    def _get_new_params(self):
         self._db.execute("""
             SELECT m.customer_id, u.tz_shift
             FROM units u
             JOIN manager m on m.db_unit_id = u.id
             JOIN auth a on u.id = a.db_unit_id
             WHERE a.is_active = true
+            AND m.new_shop_exclude = false
             GROUP BY m.customer_id, u.tz_shift;
         """)
         return self._db.fetch()
 
-    def _get_units_by_pair(self, customer_id: int, tz_shift: int):
+    def _get_lost_params(self):
         self._db.execute("""
-            SELECT u.id
+            SELECT m.customer_id, u.tz_shift, u.id, m.lost_start_date, m.lost_shift_months
             FROM units u
             JOIN manager m on m.db_unit_id = u.id
             JOIN auth a on u.id = a.db_unit_id
             WHERE a.is_active = true
-            AND m.customer_id = %s
-            AND u.tz_shift = %s;
-        """, (customer_id, tz_shift))
+            AND m.lost_shop_exclude = false
+            GROUP BY m.customer_id, u.tz_shift, u.id, m.lost_start_date, m.lost_shift_months
+            ORDER BY m.customer_id, u.tz_shift;
+        """)
         return self._db.fetch()
 
     def create_new_clients_tables(self):
-        pairs = self._get_query_pairs()
+        pairs = self._get_new_params()
         for customer_id, tz_shift in pairs:
             self._db.execute("""
             WITH pair_table AS (
@@ -84,7 +87,9 @@ class DatabaseTasker(DatabaseWorker):
             )
             SELECT * FROM pair_table
             WHERE source IS NOT NULL
-                AND promocode IS NOT NULL;
+                AND length(source) > 0
+                AND promocode IS NOT NULL
+                AND length(promocode) > 0;
             """, (customer_id, tz_shift))
 
             table = self._db.fetch()
@@ -118,72 +123,64 @@ class DatabaseTasker(DatabaseWorker):
             os.remove(filename)
 
     def create_lost_clients_tables(self):
-        pairs = self._get_query_pairs()
-        for customer_id, tz_shift in pairs:
-            units = self._get_units_by_pair(customer_id, tz_shift)
-            dfs = []
-            for unit_id, in units:
-                self._db.execute("""
-                    SELECT lost_start_date, lost_shift_months
-                    FROM manager WHERE db_unit_id = %s;
-                    """, (unit_id,))
-                unit_data = self._db.fetch(one=True)
-                lost_start_date, lost_shift_months = unit_data
-                lost_end_date = lost_start_date + timedelta(days=config.LOST_DURATION)
-                local_time = datetime.now(timezone.utc) + timedelta(hours=tz_shift)
-                shift_duration = timedelta(days=(lost_shift_months * config.LOST_DURATION))
-                shift_start = local_time - shift_duration - timedelta(days=8)
-                shift_end = local_time - shift_duration - timedelta(days=1)
-                if lost_end_date < shift_start.date():
-                    report_start_date = lost_start_date
-                    report_end_date = lost_end_date
-                    lost_start_date = lost_end_date + timedelta(days=1)
-                else:
-                    if lost_start_date < shift_start.date():
-                        report_start_date = lost_start_date
-                    else:
-                        report_start_date = shift_start
-                    report_end_date = shift_end
-                    lost_start_date = shift_end + timedelta(days=1)
-                self._db.execute("""
-                SELECT 
-                    c.phone,
-                    m.lost_promo,
-                    m.lost_city,
-                    m.pizzeria,
-                    c.last_order_city,
-                    c.last_order_datetime,
-                    m.lost_source
-                FROM clients c
-                JOIN units u ON c.db_unit_id = u.id
-                JOIN manager m ON m.db_unit_id = u.id
-                LEFT JOIN stop_list sl on c.phone = sl.phone
-                WHERE m.customer_id = %s 
-                    AND u.tz_shift = %s
-                    AND u.id = %s
-                    AND c.orders_sum > 0
-                    AND c.orders_amt > 2
-                    AND c.first_order_city = u.unit_name
-                    AND c.last_order_city = u.unit_name
-                    AND m.lost_shop_exclude = false
-                    AND c.last_order_datetime + interval '1 hour' * u.tz_shift >= %s
-                    AND c.first_order_datetime + interval '1 hour' * u.tz_shift < %s
-                    AND (sl.last_call_date IS NULL
-                         OR now() AT TIME ZONE 'UTC' + interval '1 hour' * u.tz_shift - sl.last_call_date > 
-                            interval '180 days')
-                    AND (sl.do_not_call IS NULL OR NOT sl.do_not_call);
-                """, (customer_id, tz_shift, unit_id, report_start_date, report_end_date))
+        dfs = []
+        param_cursor = []  # хранит customer_id, tz_shift в кортеже
+        for customer_id, tz_shift, unit_id, lost_start_date, lost_shift_months in self._get_lost_params():
+            lost_end_date = lost_start_date + relativedelta(months=1)
+            local_time = datetime.now(timezone.utc) + timedelta(hours=tz_shift)
+            shift_duration = relativedelta(months=lost_shift_months)
+            shift_start = local_time - shift_duration - timedelta(days=8)
+            shift_end = local_time - shift_duration - timedelta(days=1)
+            if lost_end_date < shift_start.date():
+                report_start_date = lost_start_date
+                report_end_date = lost_end_date
+                lost_start_date = lost_end_date
+            else:
+                report_start_date = lost_start_date
+                report_end_date = shift_end.date()
+                lost_start_date = shift_end
+            self._db.execute("""
+            SELECT 
+                c.phone,
+                m.lost_promo,
+                m.lost_city,
+                m.pizzeria,
+                c.last_order_city,
+                c.last_order_datetime,
+                m.lost_source
+            FROM clients c
+            JOIN units u ON c.db_unit_id = u.id
+            JOIN manager m ON m.db_unit_id = u.id
+            LEFT JOIN stop_list sl on c.phone = sl.phone
+            WHERE m.customer_id = %s 
+                AND u.tz_shift = %s
+                AND u.id = %s
+                AND c.orders_sum > 0
+                AND c.orders_amt > 2
+                AND c.first_order_city = u.unit_name
+                AND c.last_order_city = u.unit_name
+                AND m.lost_shop_exclude = false
+                AND c.last_order_datetime + interval '1 hour' * u.tz_shift >= %s
+                AND c.last_order_datetime + interval '1 hour' * u.tz_shift < %s
+                AND (sl.last_call_date IS NULL
+                     OR now() AT TIME ZONE 'UTC' + interval '1 hour' * u.tz_shift - sl.last_call_date > 
+                        interval '180 days')
+                AND (sl.do_not_call IS NULL OR NOT sl.do_not_call);
+            """, (customer_id, tz_shift, unit_id, report_start_date, report_end_date))
 
-                table = self._db.fetch()
+            table = self._db.fetch()
 
-                df = pd.DataFrame(table, columns=[
-                    'phone', 'promokod', 'city', 'pizzeria', 'otdel', 'last-order', 'source'
-                ])
+            df = pd.DataFrame(table, columns=[
+                'phone', 'promokod', 'city', 'pizzeria', 'otdel', 'last-order', 'source'
+            ])
+
+            if len(df) > 0:
 
                 # преобразовываем first-order в правильную таймзону, чтобы в итоговом файле были правильные даты
                 df['last-order'] = df['last-order'].dt.tz_convert(config.TIMEZONES[tz_shift]).dt.tz_localize(None)
 
                 dfs.append(df)
+                param_cursor.append((customer_id, tz_shift, report_start_date, report_end_date))
 
                 self._db.execute("""
                     UPDATE manager
@@ -191,13 +188,21 @@ class DatabaseTasker(DatabaseWorker):
                     WHERE db_unit_id = %s; 
                     """, (lost_start_date, unit_id))
 
-            df = pd.concat(dfs)
-            filename = f'{datetime.now(timezone.utc) + timedelta(hours=3):%d.%m.%Y}_PROPAL_Blok-{customer_id}_' \
-                       f'{datetime.now(timezone.utc) + timedelta(hours=tz_shift) - timedelta(days=7):%d.%m.%Y}-' \
-                       f'{datetime.now(timezone.utc) + timedelta(hours=tz_shift) - timedelta(days=1):%d.%m.%Y}_tz-' \
-                       f'{tz_shift - 3}.xlsx'
+        if len(dfs) > 0:
+            # сохранение: обратная разбивка по customer_id, tz_shift
+            prev_new_idx = 0
+            for idx, params in enumerate(param_cursor):
+                # начался новый файл, записываем старый
+                if idx == len(param_cursor) - 1 or params != param_cursor[idx + 1]:
+                    df = pd.concat(dfs[prev_new_idx:idx + 1])
+                    prev_new_idx = idx
+                    customer_id, tz_shift, _, _ = params
+                    start_date = min([row[2] for row in param_cursor[prev_new_idx:idx + 1]])
+                    end_date = max([row[3] for row in param_cursor[prev_new_idx:idx + 1]])
+                    filename = f'{datetime.now(timezone.utc) + timedelta(hours=3):%d.%m.%Y}_PROPAL_Blok-{customer_id}_'\
+                               f'{start_date:%d.%m.%Y}-{end_date:%d.%m.%Y}_tz-{tz_shift - 3}.xlsx'
 
-            # save file, upload to Yandex Disk and delete
-            df.to_excel(filename, index=False)
-            self._storage.upload(filename, YANDEX_LOST_CLIENTS_FOLDER)
-            os.remove(filename)
+                    # save file, upload to Yandex Disk and delete
+                    df.to_excel(filename, index=False)
+                    self._storage.upload(filename, YANDEX_LOST_CLIENTS_FOLDER)
+                    os.remove(filename)
