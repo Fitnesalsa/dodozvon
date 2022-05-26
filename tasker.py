@@ -195,14 +195,13 @@ class DatabaseTasker(DatabaseWorker):
                 # начался новый файл, записываем старый
                 if idx == len(param_cursor) - 1 or params != param_cursor[idx + 1]:
                     df = pd.concat(dfs[prev_new_idx:idx + 1])
-                    prev_new_idx = idx
                     customer_id, tz_shift, _, _ = params
                     start_date = min([row[2] for row in param_cursor[prev_new_idx:idx + 1]])
                     end_date = max([row[3] for row in param_cursor[prev_new_idx:idx + 1]])
                     filename = f'{datetime.now(timezone.utc) + timedelta(hours=3):%d.%m.%Y}_PROPAL_Blok-{customer_id}_'\
                                f'{start_date:%d.%m.%Y}-{end_date:%d.%m.%Y}_tz-{tz_shift - 3}.xlsx'
-
+                    prev_new_idx = idx + 1
                     # save file, upload to Yandex Disk and delete
                     df.to_excel(filename, index=False)
-                    self._storage.upload(filename, YANDEX_LOST_CLIENTS_FOLDER)
-                    os.remove(filename)
+                    # self._storage.upload(filename, YANDEX_LOST_CLIENTS_FOLDER)
+                    # os.remove(filename)
