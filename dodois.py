@@ -140,10 +140,6 @@ class DodoISParser:
         order_type = CategoricalDtype(categories=['Доставка', 'Самовывоз', 'Ресторан'], ordered=True)
         df['first_order_type'] = df['Направление первого заказа'].astype(order_type).cat.codes
 
-        # Дата первого заказа лежит в переданном диапазоне, который совпадает с диапазоном выгрузки
-        # df = df.drop(df[df['Дата первого заказа'].dt.date < self._start_date].index)
-        # df = df.drop(df[df['Дата последнего заказа'].dt.date > self._end_date].index)
-
         # Сохраняем tz в даты
         df['Дата первого заказа'] = df['Дата первого заказа'].dt.tz_localize(self._this_timezone)
         df['Дата последнего заказа'] = df['Дата последнего заказа'].dt.tz_localize(self._this_timezone)
@@ -151,11 +147,6 @@ class DodoISParser:
         # Переводим всё в UTC
         df['Дата первого заказа'] = df['Дата первого заказа'].dt.tz_convert('UTC')
         df['Дата последнего заказа'] = df['Дата последнего заказа'].dt.tz_convert('UTC')
-
-        # Отдел соответствует отделу первого И последнего заказа
-        # city_name = re.match(r'([А-Яа-я -]+)[ -][0-9 -]+', self._unit_name).group(1)
-        # df = df.drop(df[~df['Отдел первого заказа'].str.startswith(city_name)].index)
-        # df = df.drop(df[~df['Отдел последнего заказа'].str.startswith(city_name)].index)
 
         # Номер начинается на +79
         df = df.drop(df[~df['№ телефона'].str.startswith('+79')].index)

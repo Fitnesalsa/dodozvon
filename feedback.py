@@ -40,7 +40,10 @@ class FeedbackStorer(DatabaseWorker):
         # сохраняем df
         params = []
         for row in df.iterrows():
-            params.append((row[1]['Телефон'], row[1]['Дата завершения'], row[1]['stop_list']))
+            phone = row[1]['Телефон']
+            if row[1]['Телефон'][0] != '+':
+                phone = '+' + phone
+            params.append((phone, row[1]['Дата завершения'], row[1]['stop_list']))
         if len(params) > 0:
             query = """
                 INSERT INTO stop_list (phone, last_call_date, do_not_call) VALUES %s
