@@ -40,8 +40,8 @@ class FeedbackStorer(DatabaseWorker):
         # сохраняем df
         params = []
         for row in df.iterrows():
-            phone = row[1]['Телефон']
-            if str(row[1]['Телефон'])[0] != '+':
+            phone = str(row[1]['Телефон'])
+            if phone[0] != '+':
                 phone = '+' + phone
             params.append((phone, row[1]['Дата завершения'], row[1]['stop_list']))
         if len(params) > 0:
