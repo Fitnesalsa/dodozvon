@@ -159,7 +159,7 @@ class Database:
         DELETE FROM clients
         USING units
         WHERE clients.db_unit_id = units.id 
-        AND date_trunc('day', first_order_datetime + interval '%s days') 
+        AND date_trunc('day', last_order_datetime + interval '%s days') 
               < date_trunc('day', now() AT TIME ZONE 'UTC' + interval '1 hour' * units.tz_shift);
         """
         self.execute(query, (config.DELTA_DAYS,))
