@@ -57,3 +57,5 @@ class FeedbackStorer(DatabaseWorker):
             INSERT INTO config (parameter, value) VALUES (%s, %s)
             ON CONFLICT (parameter) DO UPDATE SET value = EXCLUDED.value;
             """, ('StopListLastModifiedDate', last_modified_date.strftime('%Y-%m-%dT%H:%M:%S%z')))
+
+        self.db_close()

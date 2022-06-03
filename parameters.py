@@ -48,7 +48,7 @@ class ParametersGetter(DatabaseWorker):
                 start_date = last_update
             units_to_parse.append((id_, unit_id, unit_name, login, password, tz_shift,
                                    start_date.date(), end_date.date()))
-
+        self.db_close()
         return units_to_parse
 
     def get_config_param(self, parameter: str):

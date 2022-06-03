@@ -1,12 +1,13 @@
-import pandas as pd
-
 from postgresql import Database
 
 
 class DatabaseWorker:
-    def __init__(self, db: pd.DataFrame = None):
+    def __init__(self, db: Database = None):
         """
-        Метод подключается к базе данных
+        Метод для подключения к базе данных.
+        Если передается параметр db, то класс ожидает объект Database и не выполняет соединение,
+        а предполагает, что оно уже установлено.
+        В противном случае открывает новое соединение с БД (postgresql.Database).
         """
         if not db:
             self._db = Database()
@@ -18,7 +19,8 @@ class DatabaseWorker:
 
     def db_close(self):
         """
-        Метод закрывает соединения с БД
+        Метод закрывает соединение с БД, если соединение устанавливалось при инициализации.
+        :return: None
         """
         if not self._external_db:
             self._db.close()

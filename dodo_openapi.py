@@ -36,16 +36,26 @@ class DodoOpenAPIParser:
 
 class DodoOpenAPIStorer(DatabaseWorker):
     """
-    Метод ...
+    Метод сохраняет словарь, сформированный классом DodoOpenAPIParser в базу данных.
+    Наследуется от класса DatabaseWorker.
     """
     def __init__(self, db: Database = None):
         super().__init__(db)
 
     def store(self, json_: dict):
+        """
+        Сохраяем значения словаря в БД (таблица units).
+        В ней хранятся данные всех пиццерий (название, id, uuid, часовой пояс).
+        :param json_: словарь с параметрами
+        :return: None
+        """
         params = []
+        # Для каждой пиццерии в словаре
         for unit in json_:
             # unit - это словарь
+            # если пиццерия запущена и не закрыта:
             if unit['Approve'] and not unit['IsTemporarilyClosed']:
+                # добавляем кортеж с параметрами в список
                 params.append(('ru', unit['Id'], unit['UUId'], unit['Name'], unit['TimeZoneShift']))
         query = """INSERT INTO units (country_code, unit_id, uuid, unit_name, tz_shift) VALUES %s
                    ON CONFLICT (country_code, unit_id) DO UPDATE
@@ -53,4 +63,5 @@ class DodoOpenAPIStorer(DatabaseWorker):
         # И отправляем всё одним запросом на сервер, иначе это занимает очень много времени
         self._db.execute(query, params)
 
+        # закрываем соединение с БД
         self.db_close()
