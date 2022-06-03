@@ -25,6 +25,10 @@ class YandexFileNotFound(Exception):
 
 
 class YandexDisk:
+    """
+    Класс реализует работу с АПИ Яндекс.Диска.
+    Доступные методы: выгрузка на диск, чтение даты последнего обноеления, скачивание с диска.
+    """
     def __init__(self):
         self._request_url = 'https://cloud-api.yandex.net/v1/disk/resources'
         self._headers = {'Content-Type': 'application/json',
@@ -32,17 +36,24 @@ class YandexDisk:
                          'Authorization': f'OAuth {YANDEX_API_TOKEN}'}
 
     def upload(self, filename: str, folder: str):
-        # check if folder exists
+        """
+        Выгрузка файла на Яндекс.Диск в заданную папку.
+        :param filename: имя файла
+        :param folder: имя папки
+        :return: None
+        """
+        # проверяем существует ли папка
         check_folder_response = requests.get(f'{self._request_url}?path=%2F{folder}',
                                              headers=self._headers).json()
         if check_folder_response.get('error') == 'DiskNotFoundError':
-            # create folder
+            # Если нет, создаем папку
             put_folder_response = requests.put(f'{self._request_url}?path=%2F{folder}',
                                                headers=self._headers).json()
             if 'error' in put_folder_response.keys():
+                # если возникла ошибка при создании папки, выкидываем исключение
                 raise YandexCreateFolderError(folder, folder, put_folder_response)
 
-        # upload file
+        # выгружаем файл в папку
         upload_response = requests.get(f'{self._request_url}/upload?path=%2F{folder}%2F{filename}'
                                        f'&overwrite=true', headers=self._headers).json()
         with open(filename, 'rb') as f:
@@ -52,16 +63,28 @@ class YandexDisk:
                 raise YandexUploadError(filename, upload_response)
 
     def get_modified_date(self, path: str) -> datetime:
+        """
+        Получение даты изменения файла
+        :param path: имя файла с полным путем
+        :return: объект datetime
+        """
         meta_response = requests.get(f'{self._request_url}?path=%2F{quote(path)}',
                                      headers=self._headers)
         if not meta_response.ok:
+            # если путь неверный, выкидываем исключение
             raise YandexFileNotFound(path)
 
+        # преобразуем дату из строки в объект datetime
         date_modified = datetime.strptime(meta_response.json()['modified'], '%Y-%m-%dT%H:%M:%S%z')
 
         return date_modified
 
     def download(self, path: str) -> bytes:
+        """
+        Скачивание файла.
+        :param path: полный путь к файлу.
+        :return: возвращает содержимое файла в формате bytes (бинарная строка).
+        """
         download_response = requests.get(f'{self._request_url}/download?path=%2F{quote(path)}',
                                          headers=self._headers)
         if not download_response.ok:
