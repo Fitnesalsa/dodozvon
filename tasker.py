@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timedelta, timezone
+from typing import List, Tuple
 
 import pandas as pd
 from dateutil.relativedelta import relativedelta
@@ -12,11 +13,19 @@ from postgresql import Database
 
 
 class DatabaseTasker(DatabaseWorker):
+    """
+    Класс выгружает отчеты из БД.
+    """
     def __init__(self, db: Database = None):
+        # инициализируем хранилище для записи отчетов
         self._storage = YandexDisk()
         super().__init__(db)
 
-    def _get_new_params(self):
+    def _get_new_params(self) -> List | Tuple:
+        """
+        Получает параметры для формирования отчета о новых клиентах.
+        :return: список или кортеж
+        """
         self._db.execute("""
             SELECT m.customer_id, u.tz_shift
             FROM units u
@@ -28,7 +37,11 @@ class DatabaseTasker(DatabaseWorker):
         """)
         return self._db.fetch()
 
-    def _get_lost_params(self):
+    def _get_lost_params(self) -> List | Tuple:
+        """
+        Получает параметры для формирования отчета о пропавших клиентах.
+        :return: список или кортеж
+        """
         self._db.execute("""
             SELECT m.customer_id, u.tz_shift, u.id, m.lost_start_date, m.lost_shift_months
             FROM units u
@@ -42,7 +55,12 @@ class DatabaseTasker(DatabaseWorker):
         return self._db.fetch()
 
     def create_new_clients_tables(self):
+        """
+        Формирует отчет о новых клиентах.
+        :return: None
+        """
         pairs = self._get_new_params()
+        # выгрузка раздельно по каждому набору параметров
         for customer_id, tz_shift in pairs:
             self._db.execute("""
             WITH pair_table AS (
@@ -99,30 +117,36 @@ class DatabaseTasker(DatabaseWorker):
                 'first-order'
             ])
 
-            # преобразовываем first-order в правильную таймзону, чтобы в итоговом файле были правильные даты
+            # преобразуем first-order в правильную таймзону, чтобы в итоговом файле были правильные даты
             df['first-order'] = df['first-order'].dt.tz_convert(config.TIMEZONES[tz_shift]).dt.tz_localize(None)
 
-            # generate filename
+            # генерируем имя файла
             source_str = ''
             if 0 in df['first_order_type']:
                 source_str += 'D_'
             if 1 in df['first_order_type'] or 2 in df['first_order_type']:
                 source_str += 'R+SV_'
 
-            # drop extra columns
-            df = df[['phone', 'promokod', 'city', 'pizzeria', 'otdel', 'first-order', 'source']]
-
             filename = f'{datetime.now(timezone.utc) + timedelta(hours=3):%d.%m.%Y}_NK_{source_str}Blok-{customer_id}_' \
                        f'{datetime.now(timezone.utc) + timedelta(hours=tz_shift) - timedelta(days=7):%d.%m.%Y}-' \
                        f'{datetime.now(timezone.utc) + timedelta(hours=tz_shift) - timedelta(days=1):%d.%m.%Y}_tz-' \
                        f'{tz_shift - 3}.xlsx'
 
-            # save file, upload to Yandex Disk and delete
+            # удаляем лишние поля
+            df = df[['phone', 'promokod', 'city', 'pizzeria', 'otdel', 'first-order', 'source']]
+
+            # сохраняем файл локально, загружаем в хранилище и удаляем локально.
             df.to_excel(filename, index=False)
             self._storage.upload(filename, YANDEX_NEW_CLIENTS_FOLDER)
             os.remove(filename)
 
     def create_lost_clients_tables(self):
+        """
+        Формирует отчет о пропавших клиентах.
+        Логика формирования отчета прописана в ТЗ:
+        https://docs.google.com/document/d/1XxGJ_m0LIqEudvVknUMsI0lnXCy1IjfQCrDZUEfblxU/
+        :return: None
+        """
         dfs = []
         param_cursor = []  # хранит customer_id, tz_shift в кортеже
         for customer_id, tz_shift, unit_id, lost_start_date, lost_shift_months in self._get_lost_params():
