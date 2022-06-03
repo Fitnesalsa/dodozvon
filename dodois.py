@@ -234,14 +234,15 @@ class DodoISParser:
         :return: склеенный датафрейм
         """
         df = pd.concat(dfs)
+        df = df.sort_values('Дата последнего заказа', ascending=False)
         groupby_cols = ['№ телефона', 'Дата первого заказа', 'Отдел первого заказа', 'first_order_type']
         agg_dict = {
-            'Дата последнего заказа': 'max',
-            'Отдел последнего заказа': 'max',
+            'Дата последнего заказа': 'first',
+            'Отдел последнего заказа': 'first',
             'Кол-во заказов': 'sum',
             'Сумма заказа': 'sum'
         }
-        df = df.groupby(groupby_cols, as_index=False).agg(agg_dict)
+        df.groupby(groupby_cols, as_index=False).agg(agg_dict)
         return df
 
     def parse(self) -> pd.DataFrame:
