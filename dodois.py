@@ -233,50 +233,82 @@ class DodoISParser:
         :param dfs: список датафреймов с одинаковыми столбцами
         :return: склеенный датафрейм
         """
+        # сначала склеиваем как есть
         df = pd.concat(dfs)
+        # сортируем по дате последнего заказа по убыванию
         df = df.sort_values('Дата последнего заказа', ascending=False)
+        # поля, по которым группируем (уникальные для каждого номера телефона)
         groupby_cols = ['№ телефона', 'Дата первого заказа', 'Отдел первого заказа', 'first_order_type']
+        # правила агрегирования:
+        # - верхняя дата последнего заказа и отдел последнего заказа: т.к. мы отсортировали по дате,
+        #   первой будет самая поздняя дата и соответствующий ей отдел
+        # - сумма количества заказов
+        # - сумма сумм заказов
         agg_dict = {
             'Дата последнего заказа': 'first',
             'Отдел последнего заказа': 'first',
             'Кол-во заказов': 'sum',
             'Сумма заказа': 'sum'
         }
+        # группируем и возвращаем
         df.groupby(groupby_cols, as_index=False).agg(agg_dict)
         return df
 
     def parse(self) -> pd.DataFrame:
+        """
+        Общий метод, который производит парсинг по параметрам.
+        :return: датафрейм
+        """
         dfs = []
+        # делим общий интервал на субинтервалы
         for start_date, end_date in self._split_time_params(self._start_date, self._end_date):
+            # задаем количество попыток для запросов
             attempts = config.PARSE_ATTEMPTS
             while attempts > 0:
                 attempts -= 1
                 try:
+                    # парсим отчет с субинтервалом в качестве начала и конца
                     self._parse_report(start_date, end_date)
+                    # читаем и получаем датафрейм
                     df = self._read_response()
+                    # добавляем к списку
                     dfs.append(self._process_dataframe(df))
                     attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
                 except DodoEmptyExcelError:
+                    # "прокидываем" ошибку выше, но делаем одно исключение
                     if end_date < self._end_date:  # если пиццерия открылась после начала срока, не выдаем ошибку
                         continue
                     else:
                         if attempts == 0:
+                            # если это была последняя попытка, выкидываем ошибку
                             raise DodoEmptyExcelError
+                        # в противном случае спим 2 секунды и пробуем заново
                         time.sleep(2)
                 except Exception as e:
+                    # если вылезло другое исключение, выкидываем ошибку, если последняя попытка, или спим
                     if attempts == 0:
                         raise e
                     time.sleep(2)
+        # закрываем сессию и возвращаем датафрейм
         self._session.close()
         return self._concatenate(dfs)
 
 
 class DodoISStorer(DatabaseWorker):
+    """
+    Класс записывает результат парсинга в датафрейме в БД в таблицу clients.
+    """
     def __init__(self, id_: int, db: Database = None):
         super().__init__(db)
         self._id = id_
 
     def store(self, df: pd.DataFrame):
+        """
+        Записываем построчно результат из датафрейма в БД.
+        Предполагаем, что датафрейм уже подготовленный.
+        :param df: датафрейм с результатами
+        :return: None
+        """
         params = []
         for row in df.iterrows():
             params.append((self._id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
@@ -294,11 +326,12 @@ class DodoISStorer(DatabaseWorker):
                    """
         self._db.execute(query, params)
 
-        # записываем дату последнего обновления
+        # записываем дату последнего обновления в таблицу auth
         self._db.execute("""
         UPDATE auth
         SET last_update = now() AT TIME ZONE 'UTC'
         WHERE auth.db_unit_id = %s;
         """, (self._id,))
 
+        # закрываем соединение, если открывали
         self.db_close()
