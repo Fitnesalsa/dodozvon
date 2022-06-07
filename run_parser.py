@@ -1,7 +1,4 @@
-from datetime import datetime
 from zipfile import BadZipFile
-
-import pandas as pd
 
 from bot import Bot
 from dodo_openapi import DodoOpenAPIParser, DodoOpenAPIStorer
@@ -18,19 +15,27 @@ def run():
     bot = Bot()
 
     # обновляем данные таблицы units
-    api_parser = DodoOpenAPIParser()
-    api_storer = DodoOpenAPIStorer(db=db)
-    api_result = api_parser.parse()
-    api_storer.store(api_result)
+    try:
+        api_parser = DodoOpenAPIParser()
+        api_storer = DodoOpenAPIStorer(db=db)
+        api_result = api_parser.parse()
+        api_storer.store(api_result)
+    except Exception as e:
+        bot.send_message(f'Ошибка выгрузки DodoOpenAPI: {e}')
+        raise e
 
     # получаем параметры парсинга
-    params_getter = ParametersGetter(db=db)
-    params = params_getter.get_parsing_params()
+    try:
+        params_getter = ParametersGetter(db=db)
+        params = params_getter.get_parsing_params()
+    except Exception as e:
+        bot.send_message(f'Ошибка получения параметров: {e}')
+        raise e
 
     # передаем парсеру клиентской статистики
     for (id_, *params_set) in params:  # (unit_id, unit_name, login... )
         try:
-            print(f'parsing id {id_}, params {params_set}...')
+            # print(f'parsing id {id_}, params {params_set}...')
             dodois_parser = DodoISParser(*params_set)
             dodois_storer = DodoISStorer(id_, db=db)
             dodois_result = dodois_parser.parse()
@@ -39,14 +44,21 @@ def run():
             bot.send_message(f'{params_set[1]}: Что-то пошло не так ({e})')
         except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
             bot.send_message(f'{params_set[1]}: {e.message}')
+        except Exception as e:
+            bot.send_message(f'Ошибка выгрузки из Додо ИС: {e}')
+            raise e
 
     # обновляем таблицы с фидбеком
-    stop_list_last_modified_date = params_getter.get_config_param('StopListLastModifiedDate')
-    feedback_parser = FeedbackParser()
-    feedback_storer = FeedbackStorer(db=db)
-    feedback_result = feedback_parser.parse(stop_list_last_modified_date)
-    if feedback_result:
-        feedback_storer.store(*feedback_result)
+    try:
+        stop_list_last_modified_date = params_getter.get_config_param('StopListLastModifiedDate')[0]
+        feedback_parser = FeedbackParser()
+        feedback_storer = FeedbackStorer(db=db)
+        feedback_result = feedback_parser.parse(stop_list_last_modified_date)
+        if feedback_result:
+            feedback_storer.store(*feedback_result)
+    except Exception as e:
+        bot.send_message(f'Ошибка выгрузки файла с обзвоненными клиентами: {e}')
+        raise e
 
     # чистим бд
     db.clean()

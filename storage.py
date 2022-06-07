@@ -13,7 +13,7 @@ class YandexUploadError(Exception):
 
 
 class YandexCreateFolderError(Exception):
-    def __init__(self, filename: str, folder: str, response: dict):
+    def __init__(self, folder: str, response: dict):
         self.message = f'Ошибка при создании папки {folder}, ответ: {response}'
         super().__init__(self.message)
 
@@ -51,7 +51,7 @@ class YandexDisk:
                                                headers=self._headers).json()
             if 'error' in put_folder_response.keys():
                 # если возникла ошибка при создании папки, выкидываем исключение
-                raise YandexCreateFolderError(folder, folder, put_folder_response)
+                raise YandexCreateFolderError(folder, put_folder_response)
 
         # выгружаем файл в папку
         upload_response = requests.get(f'{self._request_url}/upload?path=%2F{folder}%2F{filename}'
