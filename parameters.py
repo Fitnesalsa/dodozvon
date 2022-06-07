@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from config import DELTA_DAYS
 from parser import DatabaseWorker
@@ -56,7 +56,7 @@ class ParametersGetter(DatabaseWorker):
         self.db_close()
         return units_to_parse
 
-    def get_config_param(self, parameter: str) -> Tuple | List:
+    def get_config_param(self, parameter: str) -> Union[Tuple, List]:
         """
         Получаем параметр конфигурации из таблицы config по имени.
         :param parameter:
