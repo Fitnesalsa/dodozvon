@@ -16,6 +16,7 @@ def run():
 
     # обновляем данные таблицы units
     try:
+        print('Parsing OpenAPI...')
         api_parser = DodoOpenAPIParser()
         api_storer = DodoOpenAPIStorer(db=db)
         api_result = api_parser.parse()
@@ -26,6 +27,7 @@ def run():
 
     # получаем параметры парсинга
     try:
+        print('Getting params...')
         params_getter = ParametersGetter(db=db)
         params = params_getter.get_parsing_params()
     except Exception as e:
@@ -35,7 +37,7 @@ def run():
     # передаем парсеру клиентской статистики
     for (id_, *params_set) in params:  # (unit_id, unit_name, login... )
         try:
-            # print(f'parsing id {id_}, params {params_set}...')
+            print(f'parsing id {id_}, params {params_set}...')
             dodois_parser = DodoISParser(*params_set)
             dodois_storer = DodoISStorer(id_, db=db)
             dodois_result = dodois_parser.parse()
@@ -50,6 +52,7 @@ def run():
 
     # обновляем таблицы с фидбеком
     try:
+        print('Updating stop list...')
         stop_list_last_modified_date = params_getter.get_config_param('StopListLastModifiedDate')[0]
         feedback_parser = FeedbackParser()
         feedback_storer = FeedbackStorer(db=db)
@@ -59,6 +62,8 @@ def run():
     except Exception as e:
         bot.send_message(f'Ошибка выгрузки файла с обзвоненными клиентами: {e}')
         raise e
+
+    print('Parsing complete!')
 
     # чистим бд
     db.clean()
