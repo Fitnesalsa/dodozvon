@@ -251,7 +251,7 @@ class DodoISParser:
             'Сумма заказа': 'sum'
         }
         # группируем и возвращаем
-        df.groupby(groupby_cols, as_index=False).agg(agg_dict)
+        df = df.groupby(groupby_cols, as_index=False).agg(agg_dict)
         return df
 
     def parse(self) -> pd.DataFrame:
