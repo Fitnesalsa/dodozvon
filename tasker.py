@@ -38,8 +38,9 @@ class DatabaseTasker(DatabaseWorker):
         """)
         return self._db.fetch()
 
-    def _get_lost_params(self) -> List | Tuple:
+    def _get_lost_params(self):
         """
+         -> List | Tuple
         Получает параметры для формирования отчета о пропавших клиентах.
         :return: список или кортеж
         """
