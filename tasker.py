@@ -21,8 +21,9 @@ class DatabaseTasker(DatabaseWorker):
         self._storage = YandexDisk()
         super().__init__(db)
 
-    def _get_new_params(self) -> List | Tuple:
+    def _get_new_params(self):
         """
+        -> List | Tuple
         Получает параметры для формирования отчета о новых клиентах.
         :return: список или кортеж
         """

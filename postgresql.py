@@ -17,7 +17,9 @@ class Database:
         self._cur = None
 
     def connect(self):
-        # Connect to an existing database
+        """
+        Connect to an existing database
+        """
         self._conn = psycopg2.connect(dbname=self._database,
                                       user=self._user,
                                       password=self._pass,
