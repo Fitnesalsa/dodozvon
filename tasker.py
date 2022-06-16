@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta, timezone
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import pandas as pd
 from dateutil.relativedelta import relativedelta
@@ -21,9 +21,8 @@ class DatabaseTasker(DatabaseWorker):
         self._storage = YandexDisk()
         super().__init__(db)
 
-    def _get_new_params(self):
+    def _get_new_params(self) -> Union[List, Tuple]:
         """
-        -> List | Tuple
         Получает параметры для формирования отчета о новых клиентах.
         :return: список или кортеж
         """
@@ -38,9 +37,8 @@ class DatabaseTasker(DatabaseWorker):
         """)
         return self._db.fetch()
 
-    def _get_lost_params(self):
+    def _get_lost_params(self) -> Union[List, Tuple]:
         """
-         -> List | Tuple
         Получает параметры для формирования отчета о пропавших клиентах.
         :return: список или кортеж
         """
