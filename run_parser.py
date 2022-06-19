@@ -1,3 +1,4 @@
+from datetime import timezone, datetime
 from zipfile import BadZipFile
 
 from bot import Bot
@@ -53,7 +54,10 @@ def run():
     # обновляем таблицы с фидбеком
     try:
         print('Updating stop list...')
-        stop_list_last_modified_date = params_getter.get_config_param('StopListLastModifiedDate')[0]
+        try:
+            stop_list_last_modified_date = params_getter.get_config_param('StopListLastModifiedDate')[0]
+        except TypeError:
+            stop_list_last_modified_date = datetime(1970, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         feedback_parser = FeedbackParser()
         feedback_storer = FeedbackStorer(db=db)
         feedback_result = feedback_parser.parse(stop_list_last_modified_date)
