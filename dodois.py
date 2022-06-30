@@ -302,3 +302,4 @@ class DodoISStorer(DatabaseWorker):
         """, (self._id,))
 
         self.db_close()
+
