@@ -6,11 +6,14 @@ from dodois import DodoAuthError, DodoEmptyExcelError, DodoResponseError
 
 from zipfile import BadZipFile
 
-import pandas as pd
+import schedule
 from datetime import datetime
+import time
 
 
 def main():
+    cur_time = datetime.now().strftime('%H:%M:%S')
+    print(f'{cur_time}: Begin parsing process.')
     db = Database()
     db.connect()
 
@@ -38,7 +41,14 @@ def main():
             print(f'{params_set[1]}: {e.message}')
     
     db.close()
+    cur_time = datetime.now().strftime('%H:%M:%S')
+    print(f'{cur_time}: Parsing process succesfully end.\nWaiting...')
 
 if __name__=='__main__':
+    schedule.every(6).hours.do(main)
+    # For the first run.
     main()
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
