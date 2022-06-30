@@ -32,8 +32,10 @@ def main():
             dodois_storer_orders = DodoISStorerOrders(id_, db=db)
             dodois_result_orders = dodois_parser_orders.parse()
             dodois_storer_orders.store(dodois_result_orders)
-        except Exception as err:
-            print(f'Something went wrong: {err}')
+        except (ValueError, BadZipFile) as err:
+            print(f'Something went wrong with {params_set[1]}: {err}')
+        except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
+            print(f'{params_set[1]}: {e.message}')
     
     db.close()
 
