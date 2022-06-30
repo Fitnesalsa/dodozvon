@@ -74,7 +74,7 @@ class DodoISParserOrders(DodoISParser):
         df = df.drop(df[~df['Номер телефона'].str.startswith('+79', na=False)].index) 
 
         # Only order with status "Доставка".
-        df = df['Статус заказа'].str.contains('Доставка', na=False)
+        df = df[df['Статус заказа'].str.contains('Доставка', na=False)]
 
         # Delete unnecessary column.
         df = df[[
@@ -139,12 +139,12 @@ class DodoISStorerOrders(DatabaseWorker):
                     row[1]['Отдел'],
                     row[1]['№ заказа'],
                     row[1]['Тип заказа'],
-                    row[1]['Номер заказа'],
+                    row[1]['Номер телефона'],
                     row[1]['Дата'],
                     row[1]['Сумма заказа']
                     ))
         query = """
-            INSERT INTO orders (db_unit_id, head_unit, unit_name, order_number, order_type, phone_number, date, order_sum) VALUES %s
+            INSERT INTO orders (db_unit_id, head_unit, unit_name, order_number, order_type, phone_number, date, order_sum) VALUES %s;
                 """
         self._db.execute(query, params)
 
@@ -152,9 +152,10 @@ class DodoISStorerOrders(DatabaseWorker):
         self._db.execute(
                 """
                 UPDATE auth
-                SET last_update = now() AT TIME SONE 'UTC'
+                SET last_update = now() AT TIME ZONE 'UTC'
                 WHERE auth.db_unit_id = %s;
-                """
+                """,
+                (self._id,)
                 )
         self.db_close()
 
