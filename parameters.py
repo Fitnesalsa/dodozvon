@@ -32,6 +32,7 @@ class ParametersGetter(DatabaseWorker):
         )
         return self._db.fetch()
 
+
     def get_parsing_params(self) -> List:
         units_to_parse = []
         for (id_, unit_id, unit_name, tz_shift, login, password, last_update) in self._get_units_from_db():
@@ -59,3 +60,4 @@ class ParametersGetter(DatabaseWorker):
         """, (parameter,))
 
         return self._db.fetch(one=True)
+

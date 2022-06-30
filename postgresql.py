@@ -34,6 +34,7 @@ class Database:
         self._create_table_manager()
         self._create_table_stop_list()
         self._create_table_config()
+        self._create_table_orders()
 
     def _create_table_units(self):
         self.execute("""
@@ -144,10 +145,31 @@ class Database:
                 value VARCHAR(100)
             );
         """)
+    def _create_table_orders(self) -> None:
+        # order_type: 0 - Доставка, 1 - Самовывоз, 2 - Ресторан, 3 - Прочее.
+        # order_status: t (true) - Доставка
+        # order_status: BOOLEAN or delete column (it's unnecessary).
+        self.execute("""
+            CREATE TABLE IF NOT EXISTS orders (
+                id BIGSERIAL PRIMARY KEY,
+                db_unit_id BIGINT,
+                head_unit VARCHAR(40),
+                order_type VARCHAR(20),
+                order_number VARCHAR(20),
+                unit_name VARCHAR(40),
+                phone_number VARCHAR(20),
+                date TIMESTAMP WITH TIME ZONE,
+                order_sum INTEGER,
+                UNIQUE (date, phone_number),
+                CONSTRAINT fk_units
+                    FOREIGN KEY (db_unit_id)
+                        REFERENCES units(id)
+                        ON DELETE CASCADE
+            );
+        """)
 
     def execute(self, query: str, argslist: Union[List, Tuple] = None):
-        if argslist and len(argslist) > 1 and query.count('%s') == 1:
-            execute_values(self._cur, query, argslist)
+        if argslist and len(argslist) > 1 and query.count('%s') == 1: execute_values(self._cur, query, argslist) 
         else:
             self._cur.execute(query, argslist)
 
@@ -170,3 +192,4 @@ class Database:
         # Close communication with the database
         self._cur.close()
         self._conn.close()
+

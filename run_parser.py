@@ -41,12 +41,12 @@ def run():
             bot.send_message(f'{params_set[1]}: {e.message}')
 
     # обновляем таблицы с фидбеком
-    stop_list_last_modified_date = params_getter.get_config_param('StopListLastModifiedDate')
-    feedback_parser = FeedbackParser()
-    feedback_storer = FeedbackStorer(db=db)
-    feedback_result = feedback_parser.parse(stop_list_last_modified_date)
-    if feedback_result:
-        feedback_storer.store(*feedback_result)
+#    stop_list_last_modified_date = params_getter.get_config_param('StopListLastModifiedDate')
+#    feedback_parser = FeedbackParser()
+#    feedback_storer = FeedbackStorer(db=db)
+#    feedback_result = feedback_parser.parse(stop_list_last_modified_date)
+#    if feedback_result:
+#        feedback_storer.store(*feedback_result)
 
     # чистим бд
     db.clean()
