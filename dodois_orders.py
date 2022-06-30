@@ -133,18 +133,28 @@ class DodoISStorerOrders(DatabaseWorker):
     def store(self, df: pd.DataFrame):
         params = []
         for row in df.iterrows():
-            params.append(
+            params.append((
                     self._id,
                     row[1]['Подразделение'],
                     row[1]['Отдел'],
                     row[1]['№ заказа'],
                     row[1]['Тип заказа'],
                     row[1]['Номер заказа'],
+                    row[1]['Дата'],
                     row[1]['Сумма заказа']
-                    )
+                    ))
         query = """
-            INSERT INTO orders (db_unit_id, head_unit, order_type, unit_name, phone_number, date, order_sum) VALUES %s
+            INSERT INTO orders (db_unit_id, head_unit, unit_name, order_number, order_type, phone_number, date, order_sum) VALUES %s
                 """
         self._db.execute(query, params)
+
+        # Write last update date.
+        self._db.execute(
+                """
+                UPDATE auth
+                SET last_update = now() AT TIME SONE 'UTC'
+                WHERE auth.db_unit_id = %s;
+                """
+                )
         self.db_close()
 
