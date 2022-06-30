@@ -1,6 +1,6 @@
 from dodois import DodoISParser, DodoEmptyExcelError, DodoResponseError
-from datetime import datetime, timedelta
-from typing import List, Tuple
+from datetime import datetime 
+from typing import List
 import io
 import time
 import config
@@ -8,10 +8,6 @@ from parser import DatabaseWorker
 from postgresql import Database
 
 import pandas as pd
-import requests
-
-from pandas import CategoricalDtype
-
 
 class DodoISParserOrders(DodoISParser):
 
@@ -33,7 +29,7 @@ class DodoISParserOrders(DodoISParser):
         order_sources = [
                 'Telephone',
                 'Site',
-                'Restraunt',
+                'Restaurant',
                 'DefectOrder',
                 'Mobile',
                 'Pizzeria',
@@ -73,20 +69,26 @@ class DodoISParserOrders(DodoISParser):
         """
         if len(df) == 0:
             raise DodoEmptyExcelError
+        
+        # Phone number starts with +79.
+        df = df.drop(df[~df['Номер телефона'].str.startswith('+79', na=False)].index) 
+
+        # Only order with status "Доставка".
+        df = df['Статус заказа'].str.contains('Доставка', na=False)
 
         # Delete unnecessary column.
-        df = df[
-                ['Подразделение'], 
-                ['Отдел'],
-                ['Дата'], 
-                ['№ заказа'], 
-                ['Тип заказа'], 
-                ['Номер телефона'], 
-                ['Сумма заказа'], 
-                ['Статус заказа']
-                ]
+        df = df[[
+                'Подразделение', 
+                'Отдел',
+                'Дата', 
+                '№ заказа', 
+                'Тип заказа', 
+                'Номер телефона', 
+                'Сумма заказа' 
+                ]]
         
         return df
+
     def _concatenate(self, dfs: List[pd.DataFrame]) -> pd.DataFrame:
        """
        Concatenate dataframes.
@@ -132,6 +134,7 @@ class DodoISStorerOrders(DatabaseWorker):
         params = []
         for row in df.iterrows():
             params.append(
+                    self._id,
                     row[1]['Подразделение'],
                     row[1]['Отдел'],
                     row[1]['№ заказа'],
@@ -140,7 +143,7 @@ class DodoISStorerOrders(DatabaseWorker):
                     row[1]['Сумма заказа']
                     )
         query = """
-            INSERT INTO orders (head_unit, order_type, unit_name, phone_number, date, order_sum) VALUES %s
+            INSERT INTO orders (db_unit_id, head_unit, order_type, unit_name, phone_number, date, order_sum) VALUES %s
                 """
         self._db.execute(query, params)
         self.db_close()
