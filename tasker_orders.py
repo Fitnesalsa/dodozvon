@@ -20,3 +20,22 @@ class DatabaseTaskerOrders(DatabaseWorker):
         self._pizzerias = []
         super().__init__(db)
 
+    def _select_pizzerias(self):
+        if self._upload_all == True:
+            for pizzeria in self._get_all_pizzerias_name():
+                self._pizzerias.append(pizzeria)
+        else:
+            pizzerias_file_name = input(
+                    '>>Type file name that contains pizzerias title:\n>>'
+                    )
+            with open(pizzerias_file_name, 'r') as file:
+                for pizzeria in file:
+                    self._pizzerias.append(pizzeria.strip())
+
+    def _get_all_pizzerias_name(self):
+        self._db.execute(
+                """
+                SELECT unit_name FROM units;
+                """
+                )
+        return self._db.fetch()
