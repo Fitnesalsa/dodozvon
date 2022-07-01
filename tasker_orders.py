@@ -11,8 +11,8 @@ from datetime import datetime
 class DatabaseTaskerOrders(DatabaseWorker):
     
     
-    def __init__(self, db: Database=None, begin_date: datetime,
-            end_date: datetime, upload_all: bool=True):
+    def __init__(self, db: Database=None, begin_date: str,
+            end_date: str, upload_all: bool=True):
         self._storage = YandexDisk()
         self._begin_date = begin_date
         self._end_date = end_date
@@ -39,3 +39,17 @@ class DatabaseTaskerOrders(DatabaseWorker):
                 """
                 )
         return self._db.fetch()
+
+    def _get_orders_table(self):
+        self._db.execute(
+                """
+                SELECT * FROM orders AS o
+                WHERE o.date > to_date(%s, 'DD-MM-YYYY')
+                AND o.date < to_date(%s, 'DD-MM-YYYY')
+                AND o.unit_name = ANY(%s)
+                ;
+                """,
+                (self._begin_date, self._end_date, self._pizzerias)
+                )
+        return self._db.fetch()
+
