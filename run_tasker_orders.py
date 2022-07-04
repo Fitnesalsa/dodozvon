@@ -11,6 +11,7 @@ def main():
     # TODO: Wrong date format; begin_date > end_date.
     # TODO: Nonexisting file; wrong fileformat.
     # TODO: Wrong answer.
+    # TODO: Encapsulate all input in class.
     print('>> Please, enter date range (dd.mm.yyyy):') 
     begin_date = input('>> Begin date: ')
     end_date = input('>> End date: ')
