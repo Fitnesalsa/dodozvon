@@ -46,8 +46,8 @@ class DatabaseTaskerOrders(DatabaseWorker):
         self._db.execute(
                 """
                 SELECT * FROM orders AS o
-                WHERE o.date > to_date(%s, 'DD-MM-YYYY')
-                AND o.date < to_date(%s, 'DD-MM-YYYY')
+                WHERE o.date > to_date(%s, 'DD.MM.YYYY')
+                AND o.date < to_date(%s, 'DD.MM.YYYY')
                 AND o.unit_name = ANY(%s)
                 ;
                 """,
@@ -69,7 +69,7 @@ class DatabaseTaskerOrders(DatabaseWorker):
                     """,
                     (self._pizzerias[0])
                     )
-            return self._db.fetch()
+            return self._db.fetch()[0]
                      
     def _get_file_name(self):
         cur_date = datetime.date.today().strftime('%d.%m.%Y') 
@@ -79,8 +79,30 @@ class DatabaseTaskerOrders(DatabaseWorker):
         return file_name
 
     def upload(self):
+        self._select_pizzerias()
         table = self._get_orders_table()
-        df = pd.DataFrame(table)
+        df = pd.DataFrame(table, columns=[
+            'id',
+            'db_unit_id',
+            'head_unit',
+            'order_type',
+            'order_number',
+            'unit_name',
+            'phone_number',
+            'date',
+            'order_sum'
+            ])
+        df['date'] = df['date'].dt.tz_localize(None)
+        # Delete unnecessary columns.
+        df = df[[
+            'head_unit',
+            'order_type',
+            'order_number',
+            'unit_name',
+            'phone_number',
+            'date',
+            'order_sum',
+            ]]
         file_name = self._get_file_name()
         df.to_excel(file_name, index=False)
 
