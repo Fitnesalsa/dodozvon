@@ -47,7 +47,7 @@ class DatabaseTaskerOrders(DatabaseWorker):
         self._db.execute(
                 """
                 SELECT * FROM orders AS o
-                WHERE o.date 
+                WHERE CAST(o.date AS date)
                 BETWEEN to_date(%s,'DD.MM.YYYY') AND to_date(%s,'DD.MM.YYYY')
                 AND o.unit_name = ANY(%s)
                 ;
@@ -105,7 +105,8 @@ class DatabaseTaskerOrders(DatabaseWorker):
             'order_sum',
             ]]
         file_name = self._get_file_name()
-        # TODO: Add upload to YandexDisk.
+        #self._storage.upload(file_name, config.YANDEX_ORDERS_FOLDER)
+        #os.remove(file_name)
         # TODO: Excel formating?
         df.to_excel(file_name, index=False)
 
