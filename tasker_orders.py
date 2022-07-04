@@ -5,7 +5,7 @@ import config
 from storage import YandexDisk
 from parser import DatabaseWorker
 from postgresql import Database
-from datetime import datetime
+from datetime import datetime, date
 
 
 class DatabaseTaskerOrders(DatabaseWorker):
@@ -52,4 +52,33 @@ class DatabaseTaskerOrders(DatabaseWorker):
                 (self._begin_date, self._end_date, self._pizzerias)
                 )
         return self._db.fetch()
+
+    def _get_block_number(self):
+        if self._upload_all == True:
+            return 'All'
+        elif len(self._pizzerias) > 1:
+            return 'Few'
+        elif len(self._pizzerias) == 1:
+            self._db.execute(
+                    """
+                    SELECT m.customer_id FROM manager AS m
+                    JOIN orders AS o
+                    ON o.unit_name = %s
+                    """,
+                    (self._pizzerias[0])
+                    )
+            return self._db.fetch()
+                     
+    def _get_file_name(self):
+        cur_date = datetime.date.today().strftime('%d.%m.%Y') 
+        block = self._get_block_number()
+        upload_range = '(' + self._begin_date + ' - ' + self._end_date + ')' 
+        file_name = cur_date + '_Zakaz_' + block + '_' + upload_range + '.xlsx'
+        return file_name
+
+    def upload(self):
+        table = self._get_orders_table()
+        df = pd.DataFrame(table)
+        file_name = self._get_file_name()
+        df.to_excel(file_name, index=False)
 
