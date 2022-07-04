@@ -43,7 +43,7 @@ class DatabaseTaskerOrders(DatabaseWorker):
         return self._db.fetch()
 
     def _get_orders_table(self):
-        # TODO: how to include right edge of range?
+        # TODO: How to include right edge of range?
         self._db.execute(
                 """
                 SELECT * FROM orders AS o
@@ -105,5 +105,7 @@ class DatabaseTaskerOrders(DatabaseWorker):
             'order_sum',
             ]]
         file_name = self._get_file_name()
+        # TODO: Add upload to YandexDisk.
+        # TODO: Excel formating?
         df.to_excel(file_name, index=False)
 
