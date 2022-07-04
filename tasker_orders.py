@@ -13,16 +13,24 @@ class DatabaseTaskerOrders(DatabaseWorker):
     def __init__(self,
             begin_date: str,
             end_date: str,
-            db: Database=None,
-            upload_all: bool=True):
+            db: Database=None):
         self._storage = YandexDisk()
         self._begin_date = begin_date
         self._end_date = end_date
-        self._upload_all = upload_all
+        self._upload_all = True 
         self._pizzerias = []
         super().__init__(db)
 
     def _select_pizzerias(self):
+        # TODO: Wrong answer exception.
+        self._upload_all = input(
+                '>> Upload data for all available pizzerias(y/n):\n>> '
+                )
+        if self._upload_all.lower() == 'y':
+            self._upload_all = True
+        else:
+            self._upload_all = False
+
         if self._upload_all == True:
             for pizzeria in self._get_all_pizzerias_name():
                 self._pizzerias.append(pizzeria)
