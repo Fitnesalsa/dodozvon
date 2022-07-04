@@ -5,8 +5,7 @@ import config
 from storage import YandexDisk
 from parser import DatabaseWorker
 from postgresql import Database
-from datetime import datetime, date
-
+import datetime
 
 class DatabaseTaskerOrders(DatabaseWorker):
     
