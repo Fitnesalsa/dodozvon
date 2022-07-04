@@ -22,10 +22,14 @@ class DatabaseTaskerOrders(DatabaseWorker):
         super().__init__(db)
 
     def _select_pizzerias(self):
-        # TODO: Wrong answer exception.
-        self._upload_all = input(
-                '>> Upload data for all available pizzerias(y/n):\n>> '
-                )
+        while True:
+            self._upload_all = input(
+                    '>> Upload data for all available pizzerias(y/n):\n>> ')
+            if self._upload_all in ('y', 'Y', 'n', 'N'):
+                break
+            else:
+                print('>> Wrong answer! Try again please.')
+
         if self._upload_all.lower() == 'y':
             self._upload_all = True
         else:
@@ -36,7 +40,7 @@ class DatabaseTaskerOrders(DatabaseWorker):
                 self._pizzerias.append(pizzeria)
         else:
             pizzerias_file_name = input(
-                    '>> Type file name that contains pizzerias title:\n>> '
+                    '>> Type filename that contains pizzerias title:\n>> '
                     )
             with open(pizzerias_file_name, 'r') as file:
                 for pizzeria in file:
