@@ -11,8 +11,11 @@ from datetime import datetime, date
 class DatabaseTaskerOrders(DatabaseWorker):
     
     
-    def __init__(self, db: Database=None, begin_date: str,
-            end_date: str, upload_all: bool=True):
+    def __init__(self,
+            begin_date: str,
+            end_date: str,
+            db: Database=None,
+            upload_all: bool=True):
         self._storage = YandexDisk()
         self._begin_date = begin_date
         self._end_date = end_date
