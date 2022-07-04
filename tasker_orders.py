@@ -28,7 +28,7 @@ class DatabaseTaskerOrders(DatabaseWorker):
                 self._pizzerias.append(pizzeria)
         else:
             pizzerias_file_name = input(
-                    '>>Type file name that contains pizzerias title:\n>>'
+                    '>> Type file name that contains pizzerias title:\n>> '
                     )
             with open(pizzerias_file_name, 'r') as file:
                 for pizzeria in file:
@@ -43,11 +43,12 @@ class DatabaseTaskerOrders(DatabaseWorker):
         return self._db.fetch()
 
     def _get_orders_table(self):
+        # TODO: how to include right edge of range?
         self._db.execute(
                 """
                 SELECT * FROM orders AS o
-                WHERE o.date > to_date(%s, 'DD.MM.YYYY')
-                AND o.date < to_date(%s, 'DD.MM.YYYY')
+                WHERE o.date 
+                BETWEEN to_date(%s,'DD.MM.YYYY') AND to_date(%s,'DD.MM.YYYY')
                 AND o.unit_name = ANY(%s)
                 ;
                 """,
@@ -67,13 +68,13 @@ class DatabaseTaskerOrders(DatabaseWorker):
                     JOIN orders AS o
                     ON o.unit_name = %s
                     """,
-                    (self._pizzerias[0])
+                    (self._pizzerias)
                     )
-            return self._db.fetch()[0]
+            return self._db.fetch()
                      
     def _get_file_name(self):
         cur_date = datetime.date.today().strftime('%d.%m.%Y') 
-        block = self._get_block_number()
+        block = str(self._get_block_number()[0][0])
         upload_range = '(' + self._begin_date + ' - ' + self._end_date + ')' 
         file_name = cur_date + '_Zakaz_' + block + '_' + upload_range + '.xlsx'
         return file_name
