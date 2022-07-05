@@ -6,18 +6,9 @@ from storage import YandexCreateFolderError, YandexUploadError, YandexFileNotFou
 
 def main():
     #bot = Bot()
-    
-    # TODO: Add exceptions handling:
-    # TODO: Wrong date format; begin_date > end_date.
-    # TODO: Encapsulate all input in class.
-    print('>> Please, enter date range (dd.mm.yyyy):') 
-    begin_date = input('>> Begin date: ')
-    end_date = input('>> End date: ')
+
     try:
-        db_tasker_orders = DatabaseTaskerOrders(
-                end_date=end_date,
-                begin_date=begin_date
-                )
+        db_tasker_orders = DatabaseTaskerOrders()
         db_tasker_orders.upload()
         db_tasker_orders.db_close()
     except (YandexCreateFolderError,
