@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import re
 
 import config
 from storage import YandexDisk
@@ -24,11 +25,12 @@ class DatabaseTaskerOrders(DatabaseWorker):
     def _select_pizzerias(self):
         while True:
             self._upload_all = input(
-                    '>> Upload data for all available pizzerias(y/n):\n>> ')
+                    '>> Upload data for all available pizzerias(y/n)?:\n>> '
+                    )
             if self._upload_all in ('y', 'Y', 'n', 'N'):
                 break
             else:
-                print('>> Wrong answer! Try again please.')
+                print('>> Error! Wrong answer! Try again please.')
 
         if self._upload_all.lower() == 'y':
             self._upload_all = True
@@ -39,9 +41,23 @@ class DatabaseTaskerOrders(DatabaseWorker):
             for pizzeria in self._get_all_pizzerias_name():
                 self._pizzerias.append(pizzeria)
         else:
-            pizzerias_file_name = input(
-                    '>> Type filename that contains pizzerias title:\n>> '
-                    )
+            while True:
+                pizzerias_file_name = input(
+                        '>> Type filename that contains pizzerias title:\n>> '
+                        )
+                if not re.search(r'.*\.txt', pizzerias_file_name):
+                    print(
+                        '>> Error! File should be txt format.' 
+                        'Try again please.'
+                        )
+                elif not os.path.exists(pizzerias_file_name):
+                    print(
+                        ">> Error! File dosn't exist."
+                        " Please check spelling and try again."
+                        )
+                else:
+                    break
+
             with open(pizzerias_file_name, 'r') as file:
                 for pizzeria in file:
                     self._pizzerias.append(pizzeria.strip())

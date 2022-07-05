@@ -9,7 +9,6 @@ def main():
     
     # TODO: Add exceptions handling:
     # TODO: Wrong date format; begin_date > end_date.
-    # TODO: Nonexisting file; wrong fileformat.
     # TODO: Encapsulate all input in class.
     print('>> Please, enter date range (dd.mm.yyyy):') 
     begin_date = input('>> Begin date: ')
