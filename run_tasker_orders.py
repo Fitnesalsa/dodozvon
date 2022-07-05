@@ -15,8 +15,10 @@ def main():
             YandexUploadError,
             YandexFileNotFound) as e:
         print('>> ' + e.message)
+        #bot.send_message(e.message)
     
     print('>> Upload is successfully completed.')
+    #bot.send_message('Upload is succesfully completed.')
 
 
 if __name__ == '__main__':
