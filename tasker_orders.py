@@ -27,13 +27,7 @@ class DatabaseTaskerOrders(DatabaseWorker):
             self._end_date = input('>> End date: ')
             date_pattern = r'\d{2}\.\d{2}\.\d{4}'
 
-            if datetime.strptime(self._begin_date, '%d.%m.%Y') > \
-            datetime.strptime(self._end_date, '%d.%m.%Y'):
-                print(
-                        '>> Error! Begin date is later then end date.'
-                        'Try again please.'
-                        )
-            elif re.search(date_pattern, self._begin_date):
+            if re.search(date_pattern, self._begin_date):
                 print(
                         '>> Error! Wrong begin date format.'
                         ' Try again please.'
@@ -42,6 +36,12 @@ class DatabaseTaskerOrders(DatabaseWorker):
                 print(
                         '>> Error! Wrong end date format.'
                         ' Try again please.'
+                        )
+            elif datetime.strptime(self._begin_date, '%d.%m.%Y') > \
+            datetime.strptime(self._end_date, '%d.%m.%Y'):
+                print(
+                        '>> Error! Begin date is later then end date.'
+                        'Try again please.'
                         )
             # TODO: Dates beyond available date range from database.
             else:
