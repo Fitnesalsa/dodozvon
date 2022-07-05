@@ -6,21 +6,46 @@ import config
 from storage import YandexDisk
 from parser import DatabaseWorker
 from postgresql import Database
-import datetime
+from datetime import datetime, date
+
 
 class DatabaseTaskerOrders(DatabaseWorker):
     
     
-    def __init__(self,
-            begin_date: str,
-            end_date: str,
-            db: Database=None):
+    def __init__(self,db: Database=None):
         self._storage = YandexDisk()
-        self._begin_date = begin_date
-        self._end_date = end_date
+        self._begin_date = ''
+        self._end_date = ''
         self._upload_all = True 
         self._pizzerias = []
         super().__init__(db)
+
+    def _set_date_range(self):
+        print('>> Enter please date range (dd.mm.yyyy):')
+        while True:
+            self._begin_date = input('>> Begin date: ')
+            self._end_date = input('>> End date: ')
+            date_pattern = r'\d{2}\.\d{2}\.\d{4}'
+
+            if datetime.strptime(self._begin_date, '%d.%m.%Y') > \
+            datetime.strptime(self._end_date, '%d.%m.%Y'):
+                print(
+                        '>> Error! Begin date is later then end date.'
+                        'Try again please.'
+                        )
+            elif re.search(date_pattern, self._begin_date):
+                print(
+                        '>> Error! Wrong begin date format.'
+                        ' Try again please.'
+                        )
+            elif re.search(date_pattern, self._end_date):
+                print(
+                        '>> Error! Wrong end date format.'
+                        ' Try again please.'
+                        )
+            # TODO: Dates beyond available date range from database.
+            else:
+                break
 
     def _select_pizzerias(self):
         while True:
@@ -97,11 +122,11 @@ class DatabaseTaskerOrders(DatabaseWorker):
                     """,
                     (self._pizzerias)
                     )
-            return self._db.fetch()
+            return str(self._db.fetch()[0][0])
                      
     def _get_file_name(self):
-        cur_date = datetime.date.today().strftime('%d.%m.%Y') 
-        block = str(self._get_block_number()[0][0])
+        cur_date = date.today().strftime('%d.%m.%Y') 
+        block = self._get_block_number()
         upload_range = '(' + self._begin_date + ' - ' + self._end_date + ')' 
         file_name = cur_date + '_Zakaz_' + block + '_' + upload_range + '.xlsx'
         return file_name
