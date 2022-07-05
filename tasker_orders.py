@@ -22,22 +22,26 @@ class DatabaseTaskerOrders(DatabaseWorker):
 
     def _set_date_range(self):
         print('>> Enter please date range (dd.mm.yyyy):')
+        date_pattern = r'^\d{2}\.\d{2}\.\d{4}$'
         while True:
             self._begin_date = input('>> Begin date: ')
-            self._end_date = input('>> End date: ')
-            date_pattern = r'\d{2}\.\d{2}\.\d{4}'
-
-            if re.search(date_pattern, self._begin_date):
+            if re.search(date_pattern, self._begin_date) == None:
                 print(
                         '>> Error! Wrong begin date format.'
                         ' Try again please.'
                         )
-            elif re.search(date_pattern, self._end_date):
+                continue
+
+            self._end_date = input('>> End date: ')
+            if re.search(date_pattern, self._end_date) == None:
                 print(
                         '>> Error! Wrong end date format.'
                         ' Try again please.'
                         )
-            elif datetime.strptime(self._begin_date, '%d.%m.%Y') > \
+                continue
+
+            # TODO: Wrong date like: 33 - month.
+            if datetime.strptime(self._begin_date, '%d.%m.%Y') > \
             datetime.strptime(self._end_date, '%d.%m.%Y'):
                 print(
                         '>> Error! Begin date is later then end date.'
@@ -160,6 +164,6 @@ class DatabaseTaskerOrders(DatabaseWorker):
         file_name = self._get_file_name()
         # TODO: Excel formating?
         df.to_excel(file_name, index=False)
-        #self._storage.upload(file_name, config.YANDEX_ORDERS_FOLDER)
-        #os.remove(file_name)
+        self._storage.upload(file_name, config.YANDEX_ORDERS_FOLDER)
+        os.remove(file_name)
 
