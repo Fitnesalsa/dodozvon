@@ -132,6 +132,7 @@ class DatabaseTaskerOrders(DatabaseWorker):
         return file_name
 
     def upload(self):
+        self._set_date_range()
         self._select_pizzerias()
         table = self._get_orders_table()
         df = pd.DataFrame(table, columns=[
