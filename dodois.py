@@ -75,7 +75,7 @@ class DodoISParser:
         # заголовки для запроса с авторизацией
         self._headers_auth = {'origin': 'https://auth.dodopizza.ru',
                               'referer': 'https://auth.dodopizza.ru/Authenticate/LogOn',
-                              'User-Agent': random.choice(self._user_agents)}
+                              'User-Agent': 'dodoextbot'}
         # данные для POST-запроса авторизации
         self._auth_payload = {'State': '',
                               'fromSiteId': '',
