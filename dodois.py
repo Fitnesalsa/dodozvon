@@ -61,7 +61,7 @@ class DodoISParser:
     """
 
     def __init__(self, unit_id: int, unit_name: str, login: str, password: str, tz_shift: int,
-                 start_date: datetime, end_date: datetime, promos: list):
+                 start_date: datetime, end_date: datetime, promos: str):
         # заголовки для запроса с авторизацией
         self._headers_auth = {'origin': 'https://auth.dodopizza.ru',
                               'referer': 'https://auth.dodopizza.ru/Authenticate/LogOn',
@@ -82,7 +82,7 @@ class DodoISParser:
         self._start_date = start_date
         self._end_date = end_date
         self._tz_shift = tz_shift
-        self._promos = promos
+        self._promos = promos.split(',')
         # сохраняем значение часовой зоны строкой
         self._this_timezone = config.TIMEZONES[self._tz_shift]
 
