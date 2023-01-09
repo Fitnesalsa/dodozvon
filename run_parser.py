@@ -23,7 +23,7 @@ def run():
         api_result = api_parser.parse()
         api_storer.store(api_result)
     except Exception as e:
-        bot.send_message(f'Ошибка выгрузки DodoOpenAPI: {e}')
+        print(f'Ошибка выгрузки DodoOpenAPI: {e}')
         raise e
 
     # получаем параметры парсинга
@@ -32,7 +32,7 @@ def run():
         params_getter = ParametersGetter(db=db)
         params = params_getter.get_parsing_params()
     except Exception as e:
-        bot.send_message(f'Ошибка получения параметров: {e}')
+        print(f'Ошибка получения параметров: {e}')
         raise e
 
     # передаем парсерам
@@ -45,11 +45,11 @@ def run():
             dodois_orders = dodois_parser.parse('orders')
             dodois_storer.store(dodois_clients_statistic, dodois_orders)
         except (ValueError, BadZipFile) as e:
-            bot.send_message(f'{params_set[1]}: Что-то пошло не так ({e})')
+            print(f'{params_set[1]}: Что-то пошло не так ({e})')
         except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
-            bot.send_message(f'{params_set[1]}: {e.message}')
+            print(f'{params_set[1]}: {e.message}')
         except Exception as e:
-            bot.send_message(f'Ошибка выгрузки из Додо ИС: {e}')
+            print(f'Ошибка выгрузки из Додо ИС: {e}')
             raise e
 
     # обновляем таблицы с фидбеком
