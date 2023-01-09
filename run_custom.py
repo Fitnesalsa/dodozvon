@@ -49,6 +49,7 @@ def run():
 
             db_tasker = DatabaseTasker()
             db_tasker.create_new_promo_tables(dodois_result, bot_id, params[1], params[5], params[6])
+            print(f'creating promo report for id {id_} completed.')
 
         except (ValueError, BadZipFile) as e:
             print(f'{params[1]}: Что-то пошло не так ({e})')
@@ -58,6 +59,7 @@ def run():
             print(f'Ошибка выгрузки из Додо ИС: {e}')
             raise e
 
+    print('all tasks completed.')
 
 
 if __name__ == '__main__':  # явный запуск скрипта

@@ -301,11 +301,11 @@ class DodoISParser:
         """
         parse_functions = {'clients_statistic':
                                {'parser': self._parse_clients_statistic,
-                                'processer': self._process_df_clients_statistics,
+                                'processor': self._process_df_clients_statistics,
                                 'concatenator': self._concatenate_clients_statistic},
                            'promo':
                                {'parser': self._parse_promo,
-                                'processer': self._process_df_promo,
+                                'processor': self._process_df_promo,
                                 'concatenator': self._concatenate_promo}
                            }
         dfs = []
