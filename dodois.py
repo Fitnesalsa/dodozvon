@@ -188,11 +188,35 @@ class DodoISParser:
                                                                  'Mobile', 'Pizzeria', 'Aggregator'],
                                                 'beginDate': kwargs['start_date'].strftime('%d.%m.%Y'),
                                                 'endDate': kwargs['end_date'].strftime('%d.%m.%Y'),
-                                                'orderTypes': ['Delivery', 'Pickup', 'Restaurant'],
+                                                'orderTypes': ['Delivery', 'Pickup', 'Stationary'],
                                                 'promoCode': kwargs['promo'],
                                                 'IsAllPromoCode': 'false',
                                                 'OnlyComposition': 'false'
                                             })
+
+    def _parse_orders(self, **kwargs) -> None:
+        """
+        Парсим отчет "Заказы" и сохраняем результат в self._response.
+        :param start_date: Начало интервала
+        :param end_date: Конец интервала
+        Если интервал более 30 дней, необходимо разбить на части. self._split_time_params()
+        :return: None
+        """
+        # Сначала авторизуемся
+        if not self._authorized:
+            self._auth()
+
+        # Отправляем запрос к отчету и записываем в атрибут self._response
+        # Ответ ожидается в виде Excel-файла.
+        self._response = self._session.post('https://officemanager.dodopizza.ru/Reports/Orders/Export',
+                                            data={
+                                                'filterType': 'AllOrders',
+                                                'unitsIds': self._unit_id,
+                                                'OrderSources': ['Telephone', 'Site', 'Restaurant', 'DefectOrder',
+                                                                 'Mobile', 'Pizzeria', 'Aggregator'],
+                                                'beginDate': kwargs['start_date'].strftime('%d.%m.%Y'),
+                                                'endDate': kwargs['end_date'].strftime('%d.%m.%Y'),
+                                                'orderTypes': ['Delivery', 'Pickup', 'Stationary']})
 
     def _read_response(self, skiprows: int) -> pd.DataFrame:
         """
@@ -247,6 +271,42 @@ class DodoISParser:
             raise DodoEmptyExcelError
         return df
 
+    def _process_df_orders(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Обрабатываем сырой датафрейм, применяем фильтры и возвращаем в виде, готовом для записи в БД.
+        :param df: сырой датафрейм
+        :return: датафрейм
+        """
+        if len(df) == 0:
+            raise DodoEmptyExcelError
+
+        # Переводим всё, что можно, в категории
+        order_type = CategoricalDtype(categories=['Доставка', 'Самовывоз', 'Ресторан'], ordered=True)
+        df['Тип заказа'] = df['Тип заказа'].astype(order_type).cat.codes
+        payment_type = CategoricalDtype(categories=['Карта', 'Карта(сайт)', ''], ordered=True)
+        df['Способ оплаты'] = df['Способ оплаты'].astype(payment_type).cat.codes
+        status_type = CategoricalDtype(categories=[
+            'Доставка', 'Отказ', 'Просрочен', 'Упакован', 'В работе', 'Принят', 'Выполнен'], ordered=True)
+        df['Статус заказа'] = df['Статус заказа'].astype(status_type).cat.codes
+        operator_type = CategoricalDtype(categories=['Мобильн.Прил.', 'Сайт', ''], ordered=True)
+        df['Оператор заказа'] = df['Оператор заказа'].astype(operator_type).cat.codes
+
+        # Сокращаем звездочки
+        df['Имя клиента'] = df['Имя клиента'].str.slice(0, 1)
+        df['Адрес'] = df['Адрес'].str.slice(0, 1)
+
+        # Сохраняем tz в даты
+        df['Дата'] = df['Дата'].dt.tz_localize(self._this_timezone)
+        df['Время'] = df['Время'].dt.tz_localize(self._this_timezone)
+        df['Время продажи (печати чека)'] = df['Время продажи (печати чека)'].dt.tz_localize(self._this_timezone)
+
+        # Переводим всё в UTC
+        df['Дата'] = df['Дата'].dt.tz_convert('UTC')
+        df['Время'] = df['Время'].dt.tz_convert('UTC')
+        df['Время продажи (печати чека)'] = df['Время продажи (печати чека)'].dt.tz_convert('UTC')
+
+        return df
+
     @staticmethod
     def _concatenate_clients_statistic(dfs: List[pd.DataFrame]) -> pd.DataFrame:
         """
@@ -294,6 +354,16 @@ class DodoISParser:
         df = pd.concat(dfs)
         return df
 
+    @staticmethod
+    def _concatenate_orders(dfs: List[pd.DataFrame]) -> pd.DataFrame:
+        """
+        Склеиваем несколько датафреймов в один.
+        :param dfs: список датафреймов с одинаковыми столбцами
+        :return: склеенный датафрейм
+        """
+        df = pd.concat(dfs)
+        return df
+
     def parse(self, report_type: str) -> pd.DataFrame:
         """
         Парсинг отчетов
@@ -308,7 +378,12 @@ class DodoISParser:
                                {'parser': self._parse_promo,
                                 'processor': self._process_df_promo,
                                 'concatenator': self._concatenate_promo,
-                                'rows': 4}
+                                'rows': 4},
+                           'orders':
+                               {'parser': self._parse_orders,
+                                'processor': self._process_df_orders,
+                                'concatenator': self._concatenate_orders,
+                                'rows': 7}
                            }
         dfs = []
         # делим общий интервал на субинтервалы

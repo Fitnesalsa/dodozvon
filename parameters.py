@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import List, Tuple, Union
 
-from config import DELTA_DAYS
 from parser import DatabaseWorker
 from postgresql import Database
 
@@ -22,7 +21,7 @@ class ParametersGetter(DatabaseWorker):
         """
         self._db.execute(
             """
-            SELECT u.id, u.unit_id, u.unit_name, u.tz_shift, a.login, a.password, a.last_update
+            SELECT u.id, u.unit_id, u.unit_name, u.tz_shift, a.login, a.password, a.last_update, u.begin_date_work
             FROM units u
             JOIN auth a ON u.id = a.db_unit_id
             WHERE a.is_active = true
@@ -38,15 +37,15 @@ class ParametersGetter(DatabaseWorker):
         :return: список параметров в кортежах.
         """
         units_to_parse = []
-        for (id_, unit_id, unit_name, tz_shift, login, password, last_update) in self._get_units_from_db():
+        for (id_, unit_id, unit_name, tz_shift, login, password, last_update, begin_work_date) in self._get_units_from_db():
             # местное время пиццерии
             local_time = datetime.now(timezone.utc) + timedelta(hours=tz_shift)
             # конец интервала - всегда вчера
             end_date = local_time - timedelta(days=1)
             # если никогда не обновляли
             if last_update is None:
-                # обновляем с начала работы пиццерии (для всех пиццерий - с
-                start_date = local_time - timedelta(days=DELTA_DAYS)
+                # обновляем с начала работы пиццерии
+                start_date = begin_work_date
             # если обновляли и меньше чем полтора года назад, обновляем с этого времени
             else:
                 start_date = last_update

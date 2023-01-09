@@ -27,8 +27,6 @@ YANDEX_LOST_PROMO_FOLDER = 'promo_lost_clients'
 CONNECT_TIMEOUT = 180
 # количество повторений для попытки запросов requests парсера
 PARSE_ATTEMPTS = 5
-# период актуальность локальной базы клиентов
-DELTA_DAYS = 550
 
 TIMEZONES = {
     2: 'Europe/Kaliningrad',

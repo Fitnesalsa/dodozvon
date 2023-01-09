@@ -278,16 +278,6 @@ class Database:
     def fetch(self, one: bool = False) -> Union[Tuple, List]:
         return self._cur.fetchone() if one else self._cur.fetchall()
 
-    def clean(self):
-        query = """
-        DELETE FROM clients
-        USING units
-        WHERE clients.db_unit_id = units.id 
-        AND date_trunc('day', last_order_datetime + interval '%s days') 
-              < date_trunc('day', now() AT TIME ZONE 'UTC' + interval '1 hour' * units.tz_shift);
-        """
-        self.execute(query, (config.DELTA_DAYS,))
-
     def close(self):
         # Make the changes to the database persistent
         self._conn.commit()
