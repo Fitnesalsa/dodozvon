@@ -296,17 +296,19 @@ class DodoISParser:
 
     def parse(self, report_type: str) -> pd.DataFrame:
         """
-        Парсинг клиентской статистики
+        Парсинг отчетов
         :return: словарь
         """
         parse_functions = {'clients_statistic':
                                {'parser': self._parse_clients_statistic,
                                 'processor': self._process_df_clients_statistics,
-                                'concatenator': self._concatenate_clients_statistic},
+                                'concatenator': self._concatenate_clients_statistic,
+                                'rows': 10},
                            'promo':
                                {'parser': self._parse_promo,
                                 'processor': self._process_df_promo,
-                                'concatenator': self._concatenate_promo}
+                                'concatenator': self._concatenate_promo,
+                                'rows': 4}
                            }
         dfs = []
         # делим общий интервал на субинтервалы
@@ -318,17 +320,17 @@ class DodoISParser:
                     attempts -= 1
                     try:
                         # парсим отчет с субинтервалом в качестве начала и конца
-                        print(promo)
                         parse_functions[report_type]['parser'](start_date=start_date, end_date=end_date, promo=promo)
                         # читаем и получаем датафрейм
-                        df = self._read_response(skiprows=10)
-                        # добавляем к списку
-                        dfs.append(parse_functions[report_type]['processor'](df))
+                        df = self._read_response(skiprows=parse_functions[report_type]['rows'])
+                        # добавляем к списку                        dfs.append(parse_functions[report_type]['processor'](df))
                         attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
                     except DodoEmptyExcelError:
-                        # "прокидываем" ошибку выше, но делаем одно исключение
+                        # "прокидываем" ошибку выше, но делаем исключения
                         if end_date < self._end_date:  # если пиццерия открылась после начала срока, не выдаем ошибку
                             continue
+                        elif report_type == 'promo':  # промокоды могут быть пустыми
+                            attempts = 0
                         else:
                             if attempts == 0:
                                 # если это была последняя попытка, выкидываем ошибку
