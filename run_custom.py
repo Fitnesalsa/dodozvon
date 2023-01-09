@@ -24,9 +24,9 @@ def run():
             m.bot_id,
             u.unit_id, 
             u.unit_name, 
-            u.tz_shift, 
             a.login, 
             a.password, 
+            u.tz_shift,
             m.custom_start_date, 
             m.custom_end_date,
             m.new_clients_promos_all
