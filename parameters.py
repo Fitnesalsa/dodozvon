@@ -43,9 +43,9 @@ class ParametersGetter(DatabaseWorker):
             local_time = datetime.now(timezone.utc) + timedelta(hours=tz_shift)
             # конец интервала - всегда вчера
             end_date = local_time - timedelta(days=1)
-            # если никогда не обновляли или обновляли больше чем полтора года назад
-            if last_update is None or last_update + timedelta(days=DELTA_DAYS) < local_time:
-                # обновляем за полтора года
+            # если никогда не обновляли
+            if last_update is None:
+                # обновляем с начала работы пиццерии (для всех пиццерий - с
                 start_date = local_time - timedelta(days=DELTA_DAYS)
             # если обновляли и меньше чем полтора года назад, обновляем с этого времени
             else:

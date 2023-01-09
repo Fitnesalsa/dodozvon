@@ -36,6 +36,7 @@ class Database:
         self._create_table_manager()
         self._create_table_stop_list()
         self._create_table_config()
+        self._create_table_orders()
 
         # Создать функции
         self._create_functions()
@@ -53,6 +54,7 @@ class Database:
                 uuid VARCHAR(32),
                 unit_name VARCHAR(40),
                 tz_shift INTEGER,
+                begin_date_work DATE,
                 UNIQUE (country_code, unit_id)
             );
         """)
@@ -155,6 +157,37 @@ class Database:
                 id BIGSERIAL PRIMARY KEY,
                 parameter VARCHAR(100) UNIQUE,
                 value VARCHAR(100)
+            );
+        """)
+
+    def _create_table_orders(self):
+        self.execute("""
+            CREATE TABLE IF NOT EXISTS orders (
+                id BIGSERIAL PRIMARY KEY,
+                db_unit_id BIGINT,
+                city VARCHAR(40),
+                department VARCHAR(40),
+                date DATETIME,
+                time DATETIME,
+                sales_time DATETIME,
+                order_id VARCHAR(11),
+                order_type INTEGER,
+                client_name CHAR,
+                phone VARCHAR(12),
+                order_sum INTEGER,
+                payment_type INTEGER,
+                status INTEGER,
+                operator INTEGER,
+                courier VARCHAR(100),
+                reason VARCHAR(100),
+                address CHAR,
+                order_it_int INTEGER,
+                transaction_id INTEGER,
+                UNIQUE (db_unit_id, date, order_id),
+                CONSTRAINT fk_units
+                    FOREIGN KEY (db_unit_id)
+                        REFERENCES units(id)
+                        ON DELETE CASCADE
             );
         """)
 

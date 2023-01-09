@@ -56,10 +56,12 @@ class DodoOpenAPIStorer(DatabaseWorker):
             # если пиццерия запущена и не закрыта:
             if unit['Approve'] and not unit['IsTemporarilyClosed']:
                 # добавляем кортеж с параметрами в список
-                params.append(('ru', unit['Id'], unit['UUId'], unit['Name'], unit['TimeZoneShift']))
-        query = """INSERT INTO units (country_code, unit_id, uuid, unit_name, tz_shift) VALUES %s
+                params.append(('ru', unit['Id'], unit['UUId'], unit['Name'], unit['TimeZoneShift'],
+                               unit['BeginDateWork']))
+        query = """INSERT INTO units (country_code, unit_id, uuid, unit_name, tz_shift, begin_date_work) VALUES %s
                    ON CONFLICT (country_code, unit_id) DO UPDATE
-                   SET (uuid, unit_name, tz_shift) = (EXCLUDED.uuid, EXCLUDED.unit_name, EXCLUDED.tz_shift);"""
+                   SET (uuid, unit_name, tz_shift, begin_date_work) = 
+                   (EXCLUDED.uuid, EXCLUDED.unit_name, EXCLUDED.tz_shift, EXCLUDED.begin_date_work);"""
         # И отправляем всё одним запросом на сервер, иначе это занимает очень много времени
         self._db.execute(query, params)
 
