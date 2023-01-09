@@ -45,7 +45,7 @@ class ParametersGetter(DatabaseWorker):
             # если никогда не обновляли
             if last_update is None:
                 # обновляем с начала работы пиццерии
-                start_date = begin_work_date
+                start_date = datetime(begin_work_date.year, begin_work_date.month, begin_work_date.day)
             # если обновляли и меньше чем полтора года назад, обновляем с этого времени
             else:
                 start_date = last_update
