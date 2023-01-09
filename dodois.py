@@ -323,7 +323,8 @@ class DodoISParser:
                         parse_functions[report_type]['parser'](start_date=start_date, end_date=end_date, promo=promo)
                         # читаем и получаем датафрейм
                         df = self._read_response(skiprows=parse_functions[report_type]['rows'])
-                        # добавляем к списку                        dfs.append(parse_functions[report_type]['processor'](df))
+                        # добавляем к списку
+                        dfs.append(parse_functions[report_type]['processor'](df))
                         attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
                     except DodoEmptyExcelError:
                         # "прокидываем" ошибку выше, но делаем исключения
