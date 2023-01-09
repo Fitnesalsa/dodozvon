@@ -47,7 +47,7 @@ def run():
             dodois_parser = DodoISParser(*params)
             dodois_result = dodois_parser.parse('promo')
             print('parsing completed')
-            db_tasker = DatabaseTasker()
+            db_tasker = DatabaseTasker(db=db)
             print('tasker created')
             db_tasker.create_new_promo_tables(dodois_result, bot_id, params[1], params[5], params[6])
             print(f'creating promo report for id {id_} completed.')
