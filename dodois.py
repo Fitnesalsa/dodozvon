@@ -180,6 +180,7 @@ class DodoISParser:
 
         # Отправляем запрос к отчету и записываем в атрибут self._response
         # Ответ ожидается в виде Excel-файла.
+        print('querying dodois...')
         self._response = self._session.post('https://officemanager.dodopizza.ru/Reports/PromoCodeUsed/Export',
                                             data={
                                                 'filterType': '',
@@ -193,6 +194,7 @@ class DodoISParser:
                                                 'IsAllPromoCode': 'false',
                                                 'OnlyComposition': 'false'
                                             })
+        print('dodois query finished!')
 
     def _read_response(self, skiprows: int) -> pd.DataFrame:
         """
