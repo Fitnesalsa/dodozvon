@@ -35,7 +35,7 @@ def run():
         bot.send_message(f'Ошибка получения параметров: {e}')
         raise e
 
-    # передаем парсеру клиентской статистики
+    # передаем парсерам
     for (id_, *params_set) in params:  # (unit_id, unit_name, login... )
         try:
             print(f'parsing id {id_}, params {params_set}...')

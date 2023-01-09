@@ -1,2 +1,6 @@
 /.idea/
 .env
+venv
+*.xlsx
+*.log
+__pycache__

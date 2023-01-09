@@ -37,6 +37,13 @@ class Database:
         self._create_table_stop_list()
         self._create_table_config()
 
+        # Создать функции
+        self._create_functions()
+
+        # Создать триггеры
+        # В 12-й версии нет CREATE OR REPLACE для триггеров, поэтому создаем только один раз, иначе ошибка
+        # self._create_triggers()
+
     def _create_table_units(self):
         self.execute("""
             CREATE TABLE IF NOT EXISTS units (
@@ -67,7 +74,7 @@ class Database:
                 sms_text VARCHAR(150),
                 sms_text_city VARCHAR(30),
                 ftp_path_city VARCHAR(15),
-                UNIQUE (db_unit_id, phone),
+                UNIQUE (phone),
                 CONSTRAINT fk_units
                     FOREIGN KEY (db_unit_id)
                         REFERENCES units(id)
@@ -120,6 +127,10 @@ class Database:
                 lost_source VARCHAR(20),
                 lost_is_active BOOLEAN,
                 lost_promo TEXT,
+                new_clients_promos_all TEXT,
+                lost_clients_promos_all TEXT,
+                promos_start_date DATE,
+                promos_end_date DATE,
                 UNIQUE (country_code, unit_id),
                 CONSTRAINT fk_units
                     FOREIGN KEY (db_unit_id)
@@ -145,6 +156,84 @@ class Database:
                 parameter VARCHAR(100) UNIQUE,
                 value VARCHAR(100)
             );
+        """)
+
+    def _create_functions(self):
+        # обновление промокодов для новых клиентов
+        # переписать по-хорошему эти функции, чтобы срабатывали только на одну строку, а не на всю таблицу сразу
+        self.execute("""
+            CREATE OR REPLACE FUNCTION update_new_promos() RETURNS trigger AS
+            $$
+            BEGIN
+            WITH np AS (
+                SELECT m.id,
+                    CASE 
+                        WHEN regexp_match(m.new_promo_deliv, '(?<=промо |промокод |Промо |Промокод )\m[A-Z0-9]+\M') IS NULL
+                            THEN CASE 
+                                    WHEN regexp_match(m.new_promo_pickup, '(?<=промо |промокод |Промо |Промокод )\m[A-Z0-9]+\M') IS NULL
+                                        THEN (regexp_match(m.new_promo_rest, '(?<=промо |промокод |Промо |Промокод )\m[A-Z0-9]+\M'))[1]
+                                    ELSE (regexp_match(m.new_promo_pickup, '(?<=промо |промокод |Промо |Промокод )\m[A-Z0-9]+\M'))[1]
+                                 END
+                            ELSE (regexp_match(m.new_promo_deliv, '(?<=промо |промокод |Промо |Промокод )\m[A-Z0-9]+\M'))[1]
+                    END AS np
+                FROM manager m
+            )
+            UPDATE manager
+            SET new_clients_promos_all =
+                CASE 
+                    WHEN manager.new_clients_promos_all IS NULL 
+                        THEN np.np
+                    WHEN np.np = ANY(regexp_split_to_array(manager.new_clients_promos_all, ','))
+                        THEN manager.new_clients_promos_all
+                    ELSE manager.new_clients_promos_all || ',' || np.np
+                END
+            FROM np
+            WHERE manager.id = np.id;
+            RETURN NULL;
+            END;
+            $$ 
+            LANGUAGE plpgsql;
+        """)
+
+        # обновление промокодов для пропавших клиентов
+        self.execute("""
+            CREATE OR REPLACE FUNCTION update_lost_promos() RETURNS trigger AS
+            $$
+            BEGIN
+            WITH np AS (
+                SELECT m.id,
+                       (regexp_match(m.lost_promo, '(?<=промо |промокод |Промо |Промокод )\m[A-Z0-9]+\M'))[1] AS np
+                FROM manager m
+            )
+            UPDATE manager
+            SET lost_clients_promos_all =
+                CASE
+                    WHEN manager.lost_clients_promos_all IS NULL
+                        THEN np.np
+                    WHEN np.np = ANY(regexp_split_to_array(manager.lost_clients_promos_all, ','))
+                        THEN manager.lost_clients_promos_all
+                    ELSE manager.lost_clients_promos_all || ',' || np.np
+                END
+            FROM np
+            WHERE manager.id = np.id;
+            RETURN NULL;
+            END;
+            $$
+            LANGUAGE plpgsql;
+        """)
+
+    def _create_triggers(self):
+        self.execute("""
+            CREATE TRIGGER on_update_manager_update_new_promos
+                AFTER UPDATE OF new_promo_deliv, new_promo_pickup, new_promo_rest ON manager
+                FOR EACH ROW
+                EXECUTE FUNCTION update_new_promos();
+        """)
+        self.execute("""
+            CREATE TRIGGER on_update_manager_update_lost_promos
+                AFTER UPDATE OF lost_promo ON manager
+                FOR EACH ROW
+                EXECUTE FUNCTION update_lost_promos();
         """)
 
     def execute(self, query: str, argslist: Union[List, Tuple] = None):

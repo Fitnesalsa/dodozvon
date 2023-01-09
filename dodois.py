@@ -63,15 +63,6 @@ class DodoISParser:
 
     def __init__(self, unit_id: int, unit_name: str, login: str, password: str, tz_shift: int,
                  start_date: datetime, end_date: datetime):
-        # значения User-Agent выбираются случайно из списка.
-        # рекомендуется раз в полгода обновлять на свежие версии браузеров.
-        self._user_agents = [
-            'Mozilla/5.0 (Windows NT 6.3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 YaBrowser/17.6.1.749 Yowser/2.5 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 YaBrowser/18.3.1.1232 Yowser/2.5 Safari/537.36',
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 10_0 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) Version/10.0 YaBrowser/17.4.3.195.10 Mobile/14A346 Safari/E7FBAF',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36']
-
         # заголовки для запроса с авторизацией
         self._headers_auth = {'origin': 'https://auth.dodopizza.ru',
                               'referer': 'https://auth.dodopizza.ru/Authenticate/LogOn',
@@ -153,7 +144,7 @@ class DodoISParser:
             elif response.url == 'https://auth.dodopizza.ru/Authenticate/LogOn':
                 raise DodoAuthError('Ошибка авторизации. Проверьте правильность данных.')
 
-    def _parse_report(self, start_date: datetime, end_date: datetime) -> None:
+    def _parse_clients_statistic(self, start_date: datetime, end_date: datetime) -> None:
         """
         Парсим отчет "Статистика по клиентам" и сохраняем результат в self._response.
         :param start_date: Начало интервала
@@ -174,7 +165,29 @@ class DodoISParser:
                                                 'endDate': end_date.strftime('%d.%m.%Y'),
                                                 'hidePhoneNumbers': 'false'})
 
-    def _read_response(self) -> pd.DataFrame:
+    def _parse_promos(self, start_date: datetime, end_date: datetime, promos: list) -> None:
+        """
+        Парсим отчет "Расход промо-кодов" и сохраняем результат в self._response.
+        :param start_date: Начало интервала
+        :param end_date: Конец интервала
+        :param promos: Список промокодов
+        Если интервал более 30 дней, необходимо разбить на части. self._split_time_params()
+        :return: None
+        """
+        # Сначала авторизуемся
+        if not self._authorized:
+            self._auth()
+
+        # Отправляем запрос к отчету и записываем в атрибут self._response
+        # Ответ ожидается в виде Excel-файла.
+        self._response = self._session.post('https://officemanager.dodopizza.ru/Reports/ClientsStatistic/Export',
+                                            data={
+                                                'unitsIds': self._unit_id,
+                                                'beginDate': start_date.strftime('%d.%m.%Y'),
+                                                'endDate': end_date.strftime('%d.%m.%Y'),
+                                                'hidePhoneNumbers': 'false'})
+
+    def _read_response(self, skiprows: int) -> pd.DataFrame:
         """
         Преобразует ответ в датафрейм pandas.
         :return: датафрейм.
@@ -183,11 +196,11 @@ class DodoISParser:
             result = io.BytesIO(self._response.content)
             # При чтении вручную сохраняем все в тип "object" - аналог строки в pandas.
             # Конвертацию в правильные типы произведем позднее.
-            return pd.read_excel(result, skiprows=10, dtype='object')
+            return pd.read_excel(result, skiprows=skiprows, dtype='object')
         else:
             raise DodoResponseError
 
-    def _process_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _process_df_clients_statistics(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Обрабатываем сырой датафрейм, применяем фильтры и возвращаем в виде, готовом для записи в БД.
         :param df: сырой датафрейм
@@ -218,7 +231,7 @@ class DodoISParser:
         return df
 
     @staticmethod
-    def _concatenate(dfs: List[pd.DataFrame]) -> pd.DataFrame:
+    def _concatenate_clients_statistic(dfs: List[pd.DataFrame]) -> pd.DataFrame:
         """
         Склеиваем несколько датафреймов в один.
         В итоговом датафрейме сохраняется уникальность номеров телефонов.
@@ -254,10 +267,10 @@ class DodoISParser:
         df = df.groupby(groupby_cols, as_index=False).agg(agg_dict)
         return df
 
-    def parse(self) -> pd.DataFrame:
+    def parse(self) -> dict:
         """
         Общий метод, который производит парсинг по параметрам.
-        :return: датафрейм
+        :return: словарь
         """
         dfs = []
         # делим общий интервал на субинтервалы
@@ -268,11 +281,11 @@ class DodoISParser:
                 attempts -= 1
                 try:
                     # парсим отчет с субинтервалом в качестве начала и конца
-                    self._parse_report(start_date, end_date)
+                    self._parse_clients_statistic(start_date, end_date)
                     # читаем и получаем датафрейм
-                    df = self._read_response()
+                    df = self._read_response(skiprows=10)
                     # добавляем к списку
-                    dfs.append(self._process_dataframe(df))
+                    dfs.append(self._process_df_clients_statistics(df))
                     attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
                 except DodoEmptyExcelError:
                     # "прокидываем" ошибку выше, но делаем одно исключение
@@ -291,7 +304,7 @@ class DodoISParser:
                     time.sleep(2)
         # закрываем сессию и возвращаем датафрейм
         self._session.close()
-        return self._concatenate(dfs)
+        return {'ClientsStatistic': self._concatenate_clients_statistic(dfs)}
 
 
 class DodoISStorer(DatabaseWorker):
@@ -302,15 +315,16 @@ class DodoISStorer(DatabaseWorker):
         super().__init__(db)
         self._id = id_
 
-    def store(self, df: pd.DataFrame):
+    def store(self, dfs: dict):
         """
         Записываем построчно результат из датафрейма в БД.
         Предполагаем, что датафрейм уже подготовленный.
         :param df: датафрейм с результатами
         :return: None
         """
+        # клиентская статистика
         params = []
-        for row in df.iterrows():
+        for row in dfs['ClientsStatistic'].iterrows():
             params.append((self._id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
                            row[1]['Отдел первого заказа'], row[1]['Дата последнего заказа'],
                            row[1]['Отдел последнего заказа'], row[1]['first_order_type'],
@@ -318,11 +332,11 @@ class DodoISStorer(DatabaseWorker):
         query = """INSERT INTO clients (db_unit_id, phone, first_order_datetime, first_order_city, 
                    last_order_datetime, last_order_city, first_order_type, orders_amt, orders_sum,
                    sms_text, sms_text_city, ftp_path_city) VALUES %s
-                   ON CONFLICT (db_unit_id, phone) DO UPDATE
-                   SET (last_order_datetime, last_order_city, orders_amt, orders_sum) = 
-                   (EXCLUDED.last_order_datetime, EXCLUDED.last_order_city, 
-                   EXCLUDED.orders_amt + clients.orders_amt,
-                   EXCLUDED.orders_sum + clients.orders_sum);
+                   ON CONFLICT (phone) DO UPDATE
+                   SET (db_unit_id, last_order_datetime, last_order_city, orders_amt, orders_sum) = 
+                   (EXCLUDED.db_unit_id, EXCLUDED.last_order_datetime, EXCLUDED.last_order_city, 
+                   EXCLUDED.orders_amt + clients.orders_amt, EXCLUDED.orders_sum + clients.orders_sum)
+                   WHERE EXCLUDED.last_order_datetime > clients.last_order_datetime;
                    """
         self._db.execute(query, params)
 
