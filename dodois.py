@@ -1,8 +1,7 @@
 import io
-import random
 import time
 from datetime import datetime, timedelta
-from typing import List, Tuple
+from typing import List, Tuple, Callable
 
 import pandas as pd
 import requests
@@ -62,7 +61,7 @@ class DodoISParser:
     """
 
     def __init__(self, unit_id: int, unit_name: str, login: str, password: str, tz_shift: int,
-                 start_date: datetime, end_date: datetime):
+                 start_date: datetime, end_date: datetime, promos: list):
         # заголовки для запроса с авторизацией
         self._headers_auth = {'origin': 'https://auth.dodopizza.ru',
                               'referer': 'https://auth.dodopizza.ru/Authenticate/LogOn',
@@ -83,6 +82,7 @@ class DodoISParser:
         self._start_date = start_date
         self._end_date = end_date
         self._tz_shift = tz_shift
+        self._promos = promos
         # сохраняем значение часовой зоны строкой
         self._this_timezone = config.TIMEZONES[self._tz_shift]
 
@@ -144,7 +144,7 @@ class DodoISParser:
             elif response.url == 'https://auth.dodopizza.ru/Authenticate/LogOn':
                 raise DodoAuthError('Ошибка авторизации. Проверьте правильность данных.')
 
-    def _parse_clients_statistic(self, start_date: datetime, end_date: datetime) -> None:
+    def _parse_clients_statistic(self, **kwargs) -> None:
         """
         Парсим отчет "Статистика по клиентам" и сохраняем результат в self._response.
         :param start_date: Начало интервала
@@ -161,11 +161,11 @@ class DodoISParser:
         self._response = self._session.post('https://officemanager.dodopizza.ru/Reports/ClientsStatistic/Export',
                                             data={
                                                 'unitsIds': self._unit_id,
-                                                'beginDate': start_date.strftime('%d.%m.%Y'),
-                                                'endDate': end_date.strftime('%d.%m.%Y'),
+                                                'beginDate': kwargs['start_date'].strftime('%d.%m.%Y'),
+                                                'endDate': kwargs['end_date'].strftime('%d.%m.%Y'),
                                                 'hidePhoneNumbers': 'false'})
 
-    def _parse_promos(self, start_date: datetime, end_date: datetime, promos: list) -> None:
+    def _parse_promo(self, **kwargs) -> None:
         """
         Парсим отчет "Расход промо-кодов" и сохраняем результат в self._response.
         :param start_date: Начало интервала
@@ -180,12 +180,19 @@ class DodoISParser:
 
         # Отправляем запрос к отчету и записываем в атрибут self._response
         # Ответ ожидается в виде Excel-файла.
-        self._response = self._session.post('https://officemanager.dodopizza.ru/Reports/ClientsStatistic/Export',
+        self._response = self._session.post('https://officemanager.dodopizza.ru/Reports/PromoCodeUsed/Export',
                                             data={
+                                                'filterType': '',
                                                 'unitsIds': self._unit_id,
-                                                'beginDate': start_date.strftime('%d.%m.%Y'),
-                                                'endDate': end_date.strftime('%d.%m.%Y'),
-                                                'hidePhoneNumbers': 'false'})
+                                                'OrderSources': ['Telephone', 'Site', 'Restaurant', 'DefectOrder',
+                                                                 'Mobile', 'Pizzeria', 'Aggregator'],
+                                                'beginDate': kwargs['start_date'].strftime('%d.%m.%Y'),
+                                                'endDate': kwargs['end_date'].strftime('%d.%m.%Y'),
+                                                'orderTypes': ['Delivery', 'Pickup', 'Restaurant'],
+                                                'promoCode': kwargs['promo'],
+                                                'IsAllPromoCode': 'false',
+                                                'OnlyComposition': 'false'
+                                            })
 
     def _read_response(self, skiprows: int) -> pd.DataFrame:
         """
@@ -230,6 +237,16 @@ class DodoISParser:
 
         return df
 
+    def _process_df_promo(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Обрабатываем сырой датафрейм, применяем фильтры и возвращаем в виде, готовом для записи в БД.
+        :param df: сырой датафрейм
+        :return: датафрейм
+        """
+        if len(df) == 0:
+            raise DodoEmptyExcelError
+        return df
+
     @staticmethod
     def _concatenate_clients_statistic(dfs: List[pd.DataFrame]) -> pd.DataFrame:
         """
@@ -267,44 +284,64 @@ class DodoISParser:
         df = df.groupby(groupby_cols, as_index=False).agg(agg_dict)
         return df
 
-    def parse(self) -> dict:
+    @staticmethod
+    def _concatenate_promo(dfs: List[pd.DataFrame]) -> pd.DataFrame:
         """
-        Общий метод, который производит парсинг по параметрам.
+        Склеиваем несколько датафреймов в один.
+        :param dfs: список датафреймов с одинаковыми столбцами
+        :return: склеенный датафрейм
+        """
+        df = pd.concat(dfs)
+        return df
+
+    def parse(self, report_type: str) -> pd.DataFrame:
+        """
+        Парсинг клиентской статистики
         :return: словарь
         """
+        parse_functions = {'clients_statistic':
+                               {'parser': self._parse_clients_statistic,
+                                'processer': self._process_df_clients_statistics,
+                                'concatenator': self._concatenate_clients_statistic},
+                           'promo':
+                               {'parser': self._parse_promo,
+                                'processer': self._process_df_promo,
+                                'concatenator': self._concatenate_promo}
+                           }
         dfs = []
         # делим общий интервал на субинтервалы
         for start_date, end_date in self._split_time_params(self._start_date, self._end_date):
-            # задаем количество попыток для запросов
-            attempts = config.PARSE_ATTEMPTS
-            while attempts > 0:
-                attempts -= 1
-                try:
-                    # парсим отчет с субинтервалом в качестве начала и конца
-                    self._parse_clients_statistic(start_date, end_date)
-                    # читаем и получаем датафрейм
-                    df = self._read_response(skiprows=10)
-                    # добавляем к списку
-                    dfs.append(self._process_df_clients_statistics(df))
-                    attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
-                except DodoEmptyExcelError:
-                    # "прокидываем" ошибку выше, но делаем одно исключение
-                    if end_date < self._end_date:  # если пиццерия открылась после начала срока, не выдаем ошибку
-                        continue
-                    else:
+            for promo in self._promos:
+                # задаем количество попыток для запросов
+                attempts = config.PARSE_ATTEMPTS
+                while attempts > 0:
+                    attempts -= 1
+                    try:
+                        # парсим отчет с субинтервалом в качестве начала и конца
+                        parse_functions[report_type]['parser'](start_date, end_date, promo)
+                        # читаем и получаем датафрейм
+                        df = self._read_response(skiprows=10)
+                        # добавляем к списку
+                        dfs.append(parse_functions[report_type]['processor'](df))
+                        attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
+                    except DodoEmptyExcelError:
+                        # "прокидываем" ошибку выше, но делаем одно исключение
+                        if end_date < self._end_date:  # если пиццерия открылась после начала срока, не выдаем ошибку
+                            continue
+                        else:
+                            if attempts == 0:
+                                # если это была последняя попытка, выкидываем ошибку
+                                raise DodoEmptyExcelError
+                            # в противном случае спим 2 секунды и пробуем заново
+                            time.sleep(2)
+                    except Exception as e:
+                        # если вылезло другое исключение, выкидываем ошибку, если последняя попытка, или спим
                         if attempts == 0:
-                            # если это была последняя попытка, выкидываем ошибку
-                            raise DodoEmptyExcelError
-                        # в противном случае спим 2 секунды и пробуем заново
+                            raise e
                         time.sleep(2)
-                except Exception as e:
-                    # если вылезло другое исключение, выкидываем ошибку, если последняя попытка, или спим
-                    if attempts == 0:
-                        raise e
-                    time.sleep(2)
         # закрываем сессию и возвращаем датафрейм
         self._session.close()
-        return {'ClientsStatistic': self._concatenate_clients_statistic(dfs)}
+        return parse_functions[report_type]['concatenator'](dfs)
 
 
 class DodoISStorer(DatabaseWorker):
@@ -315,7 +352,7 @@ class DodoISStorer(DatabaseWorker):
         super().__init__(db)
         self._id = id_
 
-    def store(self, dfs: dict):
+    def store_clients(self, df: pd.DataFrame):
         """
         Записываем построчно результат из датафрейма в БД.
         Предполагаем, что датафрейм уже подготовленный.
@@ -324,7 +361,7 @@ class DodoISStorer(DatabaseWorker):
         """
         # клиентская статистика
         params = []
-        for row in dfs['ClientsStatistic'].iterrows():
+        for row in df.iterrows():
             params.append((self._id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
                            row[1]['Отдел первого заказа'], row[1]['Дата последнего заказа'],
                            row[1]['Отдел последнего заказа'], row[1]['first_order_type'],

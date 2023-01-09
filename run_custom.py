@@ -1,4 +1,8 @@
+from zipfile import BadZipFile
+
+from dodois import DodoISParser, DodoAuthError, DodoResponseError, DodoEmptyExcelError
 from postgresql import Database
+from tasker import DatabaseTasker
 
 
 def run():
@@ -13,6 +17,44 @@ def run():
     db = Database()
     db.connect()
 
+    # новые клиенты - промо
+    db.execute("""
+        SELECT 
+            u.id,
+            m.bot_id,
+            u.unit_id, 
+            u.unit_name, 
+            u.tz_shift, 
+            a.login, 
+            a.password, 
+            m.custom_start_date, 
+            m.custom_end_date,
+            m.new_clients_promos_all
+        FROM units u
+        JOIN auth a
+            ON u.id = a.db_unit_id
+        JOIN manager m
+            ON u.id = m.db_unit_id
+        WHERE a.is_active = true AND
+            m.new_shop_exclude = false;
+    """)
+
+    for id_, bot_id, *params in db.fetch():
+        try:
+            print(f'parsing promos for id {id_}, params {params}')
+            dodois_parser = DodoISParser(*params)
+            dodois_result = dodois_parser.parse('promo')
+
+            db_tasker = DatabaseTasker()
+            db_tasker.create_new_promo_tables(dodois_result, bot_id, params[1], params[5], params[6])
+
+        except (ValueError, BadZipFile) as e:
+            print(f'{params[1]}: Что-то пошло не так ({e})')
+        except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
+            print(f'{params[1]}: {e.message}')
+        except Exception as e:
+            print(f'Ошибка выгрузки из Додо ИС: {e}')
+            raise e
 
 
 

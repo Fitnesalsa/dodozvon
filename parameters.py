@@ -51,7 +51,7 @@ class ParametersGetter(DatabaseWorker):
             else:
                 start_date = last_update
             units_to_parse.append((id_, unit_id, unit_name, login, password, tz_shift,
-                                   start_date.date(), end_date.date() ))
+                                   start_date.date(), end_date.date(), ['empty']))  # какой пиздец костыль ПЕРЕПИСАТЬ ЭТО ГОВНО
         # закрываем соединение с БД, если открывали
         self.db_close()
         return units_to_parse

@@ -20,6 +20,8 @@ TG_ADMIN_ID = env.list('TG_ADMIN_ID', subcast=int)
 YANDEX_API_TOKEN = env.str('YANDEX_API_TOKEN')
 YANDEX_NEW_CLIENTS_FOLDER = 'call_new_clients'
 YANDEX_LOST_CLIENTS_FOLDER = 'call_lost_clients'
+YANDEX_NEW_PROMO_FOLDER = 'promo_new_clients'
+YANDEX_LOST_PROMO_FOLDER = 'promo_lost_clients'
 
 # таймаут для запросов requests в секундах
 CONNECT_TIMEOUT = 180

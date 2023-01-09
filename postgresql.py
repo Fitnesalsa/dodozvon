@@ -131,7 +131,6 @@ class Database:
                 lost_clients_promos_all TEXT,
                 custom_start_date DATE,
                 custom_end_date DATE,
-                custom_parse BOOLEAN,
                 UNIQUE (country_code, unit_id),
                 CONSTRAINT fk_units
                     FOREIGN KEY (db_unit_id)

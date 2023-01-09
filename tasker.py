@@ -228,3 +228,8 @@ class DatabaseTasker(DatabaseWorker):
                     df.to_excel(filename, index=False)
                     self._storage.upload(filename, YANDEX_LOST_CLIENTS_FOLDER)
                     os.remove(filename)
+
+    def create_new_promo_tables(self, df: pd.DataFrame, bot_id: int, shop_name: str,
+                                start_date: datetime, end_date: datetime):
+        filename = f'Расход промо-кодов_{shop_name}_НК_{bot_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
+        df.to_excel(filename, index=False)

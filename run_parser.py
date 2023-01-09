@@ -41,8 +41,8 @@ def run():
             print(f'parsing id {id_}, params {params_set}...')
             dodois_parser = DodoISParser(*params_set)
             dodois_storer = DodoISStorer(id_, db=db)
-            dodois_result = dodois_parser.parse()
-            dodois_storer.store(dodois_result)
+            dodois_result = dodois_parser.parse('clients_statistic')
+            dodois_storer.store_clients(dodois_result)
         except (ValueError, BadZipFile) as e:
             bot.send_message(f'{params_set[1]}: Что-то пошло не так ({e})')
         except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
