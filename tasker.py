@@ -7,7 +7,8 @@ from dateutil.relativedelta import relativedelta
 
 import config
 from storage import YandexDisk
-from config import YANDEX_NEW_CLIENTS_FOLDER, YANDEX_LOST_CLIENTS_FOLDER
+from config import YANDEX_NEW_CLIENTS_FOLDER, YANDEX_LOST_CLIENTS_FOLDER, YANDEX_NEW_PROMO_FOLDER, \
+    YANDEX_LOST_PROMO_FOLDER
 from parser import DatabaseWorker
 from postgresql import Database
 
@@ -229,7 +230,16 @@ class DatabaseTasker(DatabaseWorker):
                     self._storage.upload(filename, YANDEX_LOST_CLIENTS_FOLDER)
                     os.remove(filename)
 
-    def create_new_promo_tables(self, df: pd.DataFrame, bot_id: int, shop_name: str,
-                                start_date: datetime, end_date: datetime):
-        filename = f'Расход промо-кодов_{shop_name}_НК_{bot_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
+    def create_promo_tables(self, df: pd.DataFrame, bot_id: int, shop_name: str,
+                            start_date: datetime, end_date: datetime,
+                            suffix: str):
+        filename = f'Расход промо-кодов_{shop_name}_{suffix}_{bot_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
         df.to_excel(filename, index=False)
+        if suffix == 'НК':
+            folder = YANDEX_NEW_PROMO_FOLDER
+        elif suffix == 'ПК':
+            folder = YANDEX_LOST_PROMO_FOLDER
+        else:
+            raise ValueError('wrong suffix!')
+        self._storage.upload(filename, folder)
+        os.remove(filename)

@@ -180,7 +180,6 @@ class DodoISParser:
 
         # Отправляем запрос к отчету и записываем в атрибут self._response
         # Ответ ожидается в виде Excel-файла.
-        print('querying dodois...')
         self._response = self._session.post('https://officemanager.dodopizza.ru/Reports/PromoCodeUsed/Export',
                                             data={
                                                 'filterType': '',
@@ -194,7 +193,6 @@ class DodoISParser:
                                                 'IsAllPromoCode': 'false',
                                                 'OnlyComposition': 'false'
                                             })
-        print('dodois query finished!')
 
     def _read_response(self, skiprows: int) -> pd.DataFrame:
         """
@@ -323,13 +321,10 @@ class DodoISParser:
                     try:
                         # парсим отчет с субинтервалом в качестве начала и конца
                         parse_functions[report_type]['parser'](start_date=start_date, end_date=end_date, promo=promo)
-                        print('parsed')
                         # читаем и получаем датафрейм
                         df = self._read_response(skiprows=parse_functions[report_type]['rows'])
-                        print('df read')
                         # добавляем к списку
                         dfs.append(parse_functions[report_type]['processor'](df))
-                        print('df appended')
                         attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
                     except DodoEmptyExcelError:
                         # "прокидываем" ошибку выше, но делаем исключения
@@ -350,7 +345,6 @@ class DodoISParser:
                         time.sleep(2)
         # закрываем сессию и возвращаем датафрейм
         self._session.close()
-        print('cycle over')
         return parse_functions[report_type]['concatenator'](dfs)
 
 

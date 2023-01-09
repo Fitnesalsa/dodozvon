@@ -46,11 +46,9 @@ def run():
             print(f'parsing promos for id {id_}, params {params}')
             dodois_parser = DodoISParser(*params)
             dodois_result = dodois_parser.parse('promo')
-            print('parsing completed')
             db_tasker = DatabaseTasker(db=db)
-            print('tasker created')
-            db_tasker.create_new_promo_tables(dodois_result, bot_id, params[1], params[5], params[6])
-            print(f'creating promo report for id {id_} completed.')
+            db_tasker.create_promo_tables(dodois_result, bot_id, params[1], params[5], params[6], 'НК')
+            print(f'creating new clients promo report for id {id_} completed.')
 
         except (ValueError, BadZipFile) as e:
             print(f'{params[1]}: Что-то пошло не так ({e})')
@@ -59,6 +57,47 @@ def run():
         except Exception as e:
             print(f'Ошибка выгрузки из Додо ИС: {e}')
             raise e
+
+        # потоерянные клиенты - промо
+        db.execute("""
+            SELECT 
+                u.id,
+                m.bot_id,
+                u.unit_id, 
+                u.unit_name, 
+                a.login, 
+                a.password, 
+                u.tz_shift,
+                m.custom_start_date, 
+                m.custom_end_date,
+                m.lost_clients_promos_all
+            FROM units u
+            JOIN auth a
+                ON u.id = a.db_unit_id
+            JOIN manager m
+                ON u.id = m.db_unit_id
+            WHERE a.is_active = true AND
+                m.lost_shop_exclude = false AND
+                m.custom_start_date IS NOT NULL AND
+                m.custom_end_date IS NOT NULL;
+        """)
+
+        for id_, bot_id, *params in db.fetch():
+            try:
+                print(f'parsing promos for id {id_}, params {params}')
+                dodois_parser = DodoISParser(*params)
+                dodois_result = dodois_parser.parse('promo')
+                db_tasker = DatabaseTasker(db=db)
+                db_tasker.create_promo_tables(dodois_result, bot_id, params[1], params[5], params[6], 'ПК')
+                print(f'creating lost clients promo report for id {id_} completed.')
+
+            except (ValueError, BadZipFile) as e:
+                print(f'{params[1]}: Что-то пошло не так ({e})')
+            except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
+                print(f'{params[1]}: {e.message}')
+            except Exception as e:
+                print(f'Ошибка выгрузки из Додо ИС: {e}')
+                raise e
 
     print('all tasks completed.')
 
