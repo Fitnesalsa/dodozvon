@@ -36,7 +36,9 @@ def run():
         JOIN manager m
             ON u.id = m.db_unit_id
         WHERE a.is_active = true AND
-            m.new_shop_exclude = false;
+            m.new_shop_exclude = false AND
+            m.custom_start_date IS NOT NULL AND
+            m.custom_end_date IS NOT NULL;
     """)
 
     for id_, bot_id, *params in db.fetch():
