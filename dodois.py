@@ -318,6 +318,7 @@ class DodoISParser:
                     attempts -= 1
                     try:
                         # парсим отчет с субинтервалом в качестве начала и конца
+                        print(promo)
                         parse_functions[report_type]['parser'](start_date=start_date, end_date=end_date, promo=promo)
                         # читаем и получаем датафрейм
                         df = self._read_response(skiprows=10)
