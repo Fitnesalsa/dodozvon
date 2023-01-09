@@ -43,7 +43,7 @@ def run():
 
     for id_, bot_id, *params in db.fetch():
         try:
-            print(f'parsing promos for id {id_}, params {params}')
+            print(f'parsing new clients promos for id {id_}, params {params}')
             dodois_parser = DodoISParser(*params)
             dodois_result = dodois_parser.parse('promo')
             db_tasker = DatabaseTasker(db=db)
@@ -84,7 +84,7 @@ def run():
 
         for id_, bot_id, *params in db.fetch():
             try:
-                print(f'parsing promos for id {id_}, params {params}')
+                print(f'parsing lost clients promos for id {id_}, params {params}')
                 dodois_parser = DodoISParser(*params)
                 dodois_result = dodois_parser.parse('promo')
                 db_tasker = DatabaseTasker(db=db)
