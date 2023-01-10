@@ -50,9 +50,9 @@ def run():
             dodois_storer = DodoISStorer(id_, db=db)
             dodois_clients_statistic = dodois_parser.parse('clients_statistic')
             print('client statistic parsed')
-            dodois_orders = dodois_parser.parse('orders')
+            #dodois_orders = dodois_parser.parse('orders')
             print('orders parsed')
-            dodois_storer.store(dodois_clients_statistic, dodois_orders)
+            dodois_storer.store(dodois_clients_statistic, None)
         except (ValueError, BadZipFile) as e:
             log_func(f'{params_set[1]}: Что-то пошло не так ({e})')
         except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:

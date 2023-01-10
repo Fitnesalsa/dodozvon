@@ -434,40 +434,43 @@ class DodoISStorer(DatabaseWorker):
         :return: None
         """
         # клиентская статистика
-        params = []
-        for row in df_clients.iterrows():
-            params.append((self._id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
-                           row[1]['Отдел первого заказа'], row[1]['Дата последнего заказа'],
-                           row[1]['Отдел последнего заказа'], row[1]['first_order_type'],
-                           row[1]['Кол-во заказов'], row[1]['Сумма заказа'], '', '', ''))
-        query = """INSERT INTO clients (db_unit_id, phone, first_order_datetime, first_order_city, 
-                   last_order_datetime, last_order_city, first_order_type, orders_amt, orders_sum,
-                   sms_text, sms_text_city, ftp_path_city) VALUES %s
-                   ON CONFLICT (phone) DO UPDATE
-                   SET (db_unit_id, last_order_datetime, last_order_city, orders_amt, orders_sum) = 
-                   (EXCLUDED.db_unit_id, EXCLUDED.last_order_datetime, EXCLUDED.last_order_city, 
-                   EXCLUDED.orders_amt + clients.orders_amt, EXCLUDED.orders_sum + clients.orders_sum)
-                   WHERE EXCLUDED.last_order_datetime > clients.last_order_datetime;
-                   """
-        self._db.execute(query, params)
+        if df_clients:
+            params = []
+            for row in df_clients.iterrows():
+                params.append((self._id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
+                               row[1]['Отдел первого заказа'], row[1]['Дата последнего заказа'],
+                               row[1]['Отдел последнего заказа'], row[1]['first_order_type'],
+                               row[1]['Кол-во заказов'], row[1]['Сумма заказа'], '', '', ''))
+            query = """INSERT INTO clients (db_unit_id, phone, first_order_datetime, first_order_city, 
+                       last_order_datetime, last_order_city, first_order_type, orders_amt, orders_sum,
+                       sms_text, sms_text_city, ftp_path_city) VALUES %s
+                       ON CONFLICT (phone) DO UPDATE
+                       SET (db_unit_id, last_order_datetime, last_order_city, orders_amt, orders_sum) = 
+                       (EXCLUDED.db_unit_id, EXCLUDED.last_order_datetime, EXCLUDED.last_order_city, 
+                       EXCLUDED.orders_amt + clients.orders_amt, EXCLUDED.orders_sum + clients.orders_sum)
+                       WHERE EXCLUDED.last_order_datetime > clients.last_order_datetime;
+                       """
+            self._db.execute(query, params)
 
         # заказы
-        params = []
-        for row in df_orders.iterrows():
-            params.append((self._id, *row[1]))
-        query = """INSERT INTO orders (
-                        db_unit_id, date, order_id, order_type, phone, order_sum, status
-                   ) VALUES %s 
-                   ON CONFLICT (db_unit_id, date, order_id) DO NOTHING;
-                """
-        self._db.execute(query, params)
+        if df_orders:
+            params = []
+            for row in df_orders.iterrows():
+                params.append((self._id, *row[1]))
+            query = """INSERT INTO orders (
+                            db_unit_id, date, order_id, order_type, phone, order_sum, status
+                       ) VALUES %s 
+                       ON CONFLICT (db_unit_id, date, order_id) DO NOTHING;
+                    """
+            self._db.execute(query, params)
 
         # записываем дату последнего обновления в таблицу auth
-        self._db.execute("""
-        UPDATE auth
-        SET last_update = now() AT TIME ZONE 'UTC'
-        WHERE auth.db_unit_id = %s;
-        """, (self._id,))
+        if df_clients or df_orders:
+            self._db.execute("""
+            UPDATE auth
+            SET last_update = now() AT TIME ZONE 'UTC'
+            WHERE auth.db_unit_id = %s;
+            """, (self._id,))
 
         # закрываем соединение, если открывали
         self.db_close()
