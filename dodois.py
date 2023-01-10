@@ -270,7 +270,6 @@ class DodoISParser:
         """
         if len(df) == 0:
             raise DodoEmptyExcelError
-        df.to_excel(f'{self._unit_name} {self._start_date:%d.%m.%Y} {self._end_date:%d.%m.%Y}.xlsx')
         return df
 
     def _process_df_orders(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -281,7 +280,7 @@ class DodoISParser:
         """
         if len(df) == 0:
             raise DodoEmptyExcelError
-
+        df.to_excel(f'{self._unit_name} {self._start_date:%d.%m.%Y} {self._end_date:%d.%m.%Y}.xlsx')
         # Переводим всё, что можно, в категории
         order_type = CategoricalDtype(categories=['Доставка', 'Самовывоз', 'Ресторан'], ordered=True)
         df['Тип заказа'] = df['Тип заказа'].astype(order_type).cat.codes
