@@ -48,11 +48,11 @@ def run():
             print(f'parsing id {id_}, params {params_set}...')
             dodois_parser = DodoISParser(*params_set)
             dodois_storer = DodoISStorer(id_, db=db)
-            dodois_clients_statistic = dodois_parser.parse('clients_statistic')
+            #dodois_clients_statistic = dodois_parser.parse('clients_statistic')
             print('client statistic parsed')
-            #dodois_orders = dodois_parser.parse('orders')
+            dodois_orders = dodois_parser.parse('orders')
             print('orders parsed')
-            dodois_storer.store(dodois_clients_statistic, None)
+            dodois_storer.store(None, dodois_orders)
         except (ValueError, BadZipFile) as e:
             log_func(f'{params_set[1]}: Что-то пошло не так ({e})')
         except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
