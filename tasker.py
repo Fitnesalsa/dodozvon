@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 import config
 from storage import YandexDisk
 from config import YANDEX_NEW_CLIENTS_FOLDER, YANDEX_LOST_CLIENTS_FOLDER, YANDEX_NEW_PROMO_FOLDER, \
-    YANDEX_LOST_PROMO_FOLDER
+    YANDEX_LOST_PROMO_FOLDER, YANDEX_ORDERS_FOLDER
 from parser import DatabaseWorker
 from postgresql import Database
 
@@ -230,6 +230,56 @@ class DatabaseTasker(DatabaseWorker):
                     self._storage.upload(filename, YANDEX_LOST_CLIENTS_FOLDER)
                     os.remove(filename)
 
+    def get_new_promo_params(self):
+        self._db.execute("""
+            SELECT 
+                u.id,
+                m.bot_id,
+                u.unit_id, 
+                u.unit_name, 
+                a.login, 
+                a.password, 
+                u.tz_shift,
+                m.custom_start_date, 
+                m.custom_end_date,
+                m.new_clients_promos_all
+            FROM units u
+            JOIN auth a
+                ON u.id = a.db_unit_id
+            JOIN manager m
+                ON u.id = m.db_unit_id
+            WHERE a.is_active = true AND
+                m.new_shop_exclude = false AND
+                m.custom_start_date IS NOT NULL AND
+                m.custom_end_date IS NOT NULL;
+        """)
+        return self._db.fetch()
+
+    def get_lost_promo_params(self):
+        self._db.execute("""
+            SELECT 
+                u.id,
+                m.bot_id,
+                u.unit_id, 
+                u.unit_name, 
+                a.login, 
+                a.password, 
+                u.tz_shift,
+                m.custom_start_date, 
+                m.custom_end_date,
+                m.lost_clients_promos_all
+            FROM units u
+            JOIN auth a
+                ON u.id = a.db_unit_id
+            JOIN manager m
+                ON u.id = m.db_unit_id
+            WHERE a.is_active = true AND
+                m.lost_shop_exclude = false AND
+                m.custom_start_date IS NOT NULL AND
+                m.custom_end_date IS NOT NULL;
+        """)
+        return self._db.fetch()
+
     def create_promo_tables(self, df: pd.DataFrame, bot_id: int, shop_name: str,
                             start_date: datetime, end_date: datetime,
                             suffix: str):
@@ -245,10 +295,57 @@ class DatabaseTasker(DatabaseWorker):
         os.remove(filename)
 
     def _get_orders_params(self):
-        pass
-
-    def create_orders_tables(self, df: pd.DataFrame, bot_id: int, shop_name: str,
-                             start_date: datetime, end_date: datetime):
-        filename = f'Заказы_{shop_name}_{bot_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d})'
-
+        self._db.execute("""
+            SELECT
+                u.id,
+                u.unit_name,
+                u.tz_shift,
+                m.bot_id,
+                m.custom_start_date,
+                m.custom_end_date
+            FROM units u
+            JOIN manager m ON u.id = m.db_unit_id
+            JOIN auth a ON u.id = a.db_unit_id
+            WHERE a.is_active = true;
         """)
+        return self._db.fetch()
+
+    def create_orders_tables(self):
+        for db_unit_id, shop_name, tz_shift, bot_id, start_date, end_date in self._get_orders_params():
+            self._db.execute("""
+                SELECT o.*, u.unit_name FROM orders o
+                JOIN units u ON u.id = o.db_unit_id
+                WHERE o.db_unit_id = %s
+                    AND o.date >= %s
+                    AND o.date <= %s;
+            """, (db_unit_id, start_date, end_date + timedelta(days=1)))
+
+            df = pd.read_table(self._db.fetch(), columns = [
+                'id', 'db_unit_id', 'Дата', '№ заказа', 'Тип заказа', 'Номер телефона', 'Сумма заказа',
+                'Статус заказа', 'Отдел'])
+
+            # восстановление полей таблицы
+            df['Подразделение'] = df['Отдел'].str.match(r'.+(?=-)')
+            df['Дата'] = df['Дата'].dt.tz_convert(config.TIMEZONES[tz_shift]).dt.tz_localize(None)
+            df['Время'] = df['Дата']
+            df['Время продажи (печати чека)'] = 0
+            df['Тип заказа'].replace(to_replace={0: 'Доставка', 1: 'Самовывоз', 2: 'Ресторан'}, inplace=True)
+            df['Имя клиента'] = '**********'
+            df['Способ оплаты'] = 0
+            df['Статус заказа'].replace(to_replace={0: 'Доставка', 1: 'Отказ', 2: 'Просрочен', 3: 'Упакован',
+                                                    4: 'В работе', 5: 'Принят', 6: 'Выполнен'}, inplace=True)
+            df['Оператор заказа'] = 0
+            df['Курьер'] = 0
+            df['Причина просрочки'] = 0
+            df['Адрес'] = '**********'
+            df['id заказа'] = 0
+            df['id транзакции'] = 0
+
+            df = df[['Подразделение', 'Отдел', 'Дата', 'Время', 'Время продажи (печати чека)', '№ заказа', 'Тип заказа',
+                     'Имя клиента', 'Номер телефона', 'Сумма заказа', 'Способ оплаты', 'Статус заказа',
+                     'Оператор заказа', 'Курьер', 'Причина просрочки', 'Адрес', 'id заказа', 'id транзакции']]
+
+            filename = f'Заказы_{shop_name}_{bot_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d})'
+            df.to_excel(filename, index=False)
+            #self._storage.upload(filename, YANDEX_ORDERS_FOLDER)
+            #os.remove(filename)

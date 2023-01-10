@@ -281,33 +281,21 @@ class DodoISParser:
         if len(df) == 0:
             raise DodoEmptyExcelError
 
-        # Переводим всё, что можно, в категории
+        # Переводим тип и статус заказа в категории
         order_type = CategoricalDtype(categories=['Доставка', 'Самовывоз', 'Ресторан'], ordered=True)
         df['Тип заказа'] = df['Тип заказа'].astype(order_type).cat.codes
-        payment_type = CategoricalDtype(categories=['Карта', 'Карта(сайт)', ''], ordered=True)
-        df['Способ оплаты'] = df['Способ оплаты'].astype(payment_type).cat.codes
         status_type = CategoricalDtype(categories=[
             'Доставка', 'Отказ', 'Просрочен', 'Упакован', 'В работе', 'Принят', 'Выполнен'], ordered=True)
         df['Статус заказа'] = df['Статус заказа'].astype(status_type).cat.codes
-        operator_type = CategoricalDtype(categories=['Мобильн.Прил.', 'Сайт', ''], ordered=True)
-        df['Оператор заказа'] = df['Оператор заказа'].astype(operator_type).cat.codes
-
-        # Сокращаем звездочки в логическое значение
-        df['Имя клиента'] = df['Имя клиента'].notna()
-        df['Адрес'] = df['Адрес'].notna()
 
         # Сохраняем tz в даты
         df['Дата'] = df['Дата'].dt.tz_localize(self._this_timezone)
-        df['Время'] = df['Время'].dt.tz_localize(self._this_timezone)
-        df['Время продажи (печати чека)'] = df['Время продажи (печати чека)'].dt.tz_localize(self._this_timezone)
 
         # Переводим всё в UTC
         df['Дата'] = df['Дата'].dt.tz_convert('UTC')
-        df['Время'] = df['Время'].dt.tz_convert('UTC')
-        df['Время продажи (печати чека)'] = df['Время продажи (печати чека)'].dt.tz_convert('UTC')
 
-        # Переводим id транзакции в логическое
-        df['id транзакции'] = df['id транзакции'].notna()
+        # Удаляем лишние столбцы
+        df = df[['Дата', '№ заказа', 'Тип заказа', 'Номер телефона', 'Сумма заказа', 'Статус заказа']]
 
         return df
 
@@ -464,17 +452,12 @@ class DodoISStorer(DatabaseWorker):
         params = []
         for row in df_orders.iterrows():
             params.append((self._id, *row[1]))
-        query = """INSERT INTO orders (db_unit_id, city, department, date, time, sales_time, order_id, order_type,
-                           client_name, phone, order_sum, payment_type, status, operator, courier, reason, address,
-                           order_it_int, transaction_id) VALUES %s
-                           ON CONFLICT (db_unit_id, date, order_id) DO NOTHING;
-                           """
-        try:
-            self._db.execute(query, params)
-        except (StringDataRightTruncation, NumericValueOutOfRange) as e:
-            for row in params:
-                print(row)
-            raise e
+        query = """INSERT INTO orders (
+                        db_unit_id, date, order_id, order_type, phone, order_sum, status
+                   ) VALUES %s 
+                   ON CONFLICT (db_unit_id, date, order_id) DO NOTHING;
+                """
+        self._db.execute(query, params)
 
         # записываем дату последнего обновления в таблицу auth
         self._db.execute("""

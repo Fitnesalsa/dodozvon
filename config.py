@@ -22,6 +22,7 @@ YANDEX_NEW_CLIENTS_FOLDER = 'call_new_clients'
 YANDEX_LOST_CLIENTS_FOLDER = 'call_lost_clients'
 YANDEX_NEW_PROMO_FOLDER = 'promo_new_clients'
 YANDEX_LOST_PROMO_FOLDER = 'promo_lost_clients'
+YANDEX_ORDERS_FOLDER = 'orders'
 
 # таймаут для запросов requests в секундах
 CONNECT_TIMEOUT = 180

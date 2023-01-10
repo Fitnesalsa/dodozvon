@@ -17,37 +17,16 @@ def run():
     db = Database()
     db.connect()
 
-    # новые клиенты - промо
-    db.execute("""
-        SELECT 
-            u.id,
-            m.bot_id,
-            u.unit_id, 
-            u.unit_name, 
-            a.login, 
-            a.password, 
-            u.tz_shift,
-            m.custom_start_date, 
-            m.custom_end_date,
-            m.new_clients_promos_all
-        FROM units u
-        JOIN auth a
-            ON u.id = a.db_unit_id
-        JOIN manager m
-            ON u.id = m.db_unit_id
-        WHERE a.is_active = true AND
-            m.new_shop_exclude = false AND
-            m.custom_start_date IS NOT NULL AND
-            m.custom_end_date IS NOT NULL;
-    """)
+    tasker = DatabaseTasker(db=db)
 
-    for id_, bot_id, *params in db.fetch():
+    # новые клиенты - промо
+
+    for id_, bot_id, *params in tasker.get_new_promo_params():
         try:
             print(f'parsing new clients promos for id {id_}, params {params}')
             dodois_parser = DodoISParser(*params)
             dodois_result = dodois_parser.parse('promo')
-            db_tasker = DatabaseTasker(db=db)
-            db_tasker.create_promo_tables(dodois_result, bot_id, params[1], params[5], params[6], 'НК')
+            tasker.create_promo_tables(dodois_result, bot_id, params[1], params[5], params[6], 'НК')
             print(f'creating new clients promo report for id {id_} completed.')
 
         except (ValueError, BadZipFile) as e:
@@ -59,36 +38,12 @@ def run():
             raise e
 
     # потоерянные клиенты - промо
-    db.execute("""
-        SELECT 
-            u.id,
-            m.bot_id,
-            u.unit_id, 
-            u.unit_name, 
-            a.login, 
-            a.password, 
-            u.tz_shift,
-            m.custom_start_date, 
-            m.custom_end_date,
-            m.lost_clients_promos_all
-        FROM units u
-        JOIN auth a
-            ON u.id = a.db_unit_id
-        JOIN manager m
-            ON u.id = m.db_unit_id
-        WHERE a.is_active = true AND
-            m.lost_shop_exclude = false AND
-            m.custom_start_date IS NOT NULL AND
-            m.custom_end_date IS NOT NULL;
-    """)
-
-    for id_, bot_id, *params in db.fetch():
+    for id_, bot_id, *params in tasker.get_lost_promo_params():
         try:
             print(f'parsing lost clients promos for id {id_}, params {params}')
             dodois_parser = DodoISParser(*params)
             dodois_result = dodois_parser.parse('promo')
-            db_tasker = DatabaseTasker(db=db)
-            db_tasker.create_promo_tables(dodois_result, bot_id, params[1], params[5], params[6], 'ПК')
+            tasker.create_promo_tables(dodois_result, bot_id, params[1], params[5], params[6], 'ПК')
             print(f'creating lost clients promo report for id {id_} completed.')
 
         except (ValueError, BadZipFile) as e:
@@ -99,6 +54,7 @@ def run():
             print(f'Ошибка выгрузки из Додо ИС: {e}')
             raise e
 
+    # заказы
 
 
     print('all tasks completed.')
