@@ -292,9 +292,9 @@ class DodoISParser:
         operator_type = CategoricalDtype(categories=['Мобильн.Прил.', 'Сайт', ''], ordered=True)
         df['Оператор заказа'] = df['Оператор заказа'].astype(operator_type).cat.codes
 
-        # Сокращаем звездочки
-        df['Имя клиента'] = df['Имя клиента'].str.slice(0, 1)
-        df['Адрес'] = df['Адрес'].str.slice(0, 1)
+        # Сокращаем звездочки в логическое значение
+        df['Имя клиента'] = ~df['Имя клиента'].isna()
+        df['Адрес'] = ~df['Адрес'].isna()
 
         # Сохраняем tz в даты
         df['Дата'] = df['Дата'].dt.tz_localize(self._this_timezone)
