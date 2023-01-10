@@ -226,10 +226,7 @@ class DodoISParser:
         """
         if self._response.ok:
             result = io.BytesIO(self._response.content)
-            # test save file
-            with open('error.xlsx', 'wb') as f:
-                f.write(result.getbuffer())
-            result.seek(0)
+
             # При чтении вручную сохраняем все в тип "object" - аналог строки в pandas.
             # Конвертацию в правильные типы произведем позднее.
             return pd.read_excel(result, skiprows=skiprows, dtype='object')
@@ -394,9 +391,7 @@ class DodoISParser:
                         # парсим отчет с субинтервалом в качестве начала и конца
                         parse_functions[report_type]['parser'](start_date=start_date, end_date=end_date, promo=promo)
                         # читаем и получаем датафрейм
-                        print('reading...')
                         df = self._read_response(skiprows=parse_functions[report_type]['rows'])
-                        print('read complete!')
                         # добавляем к списку
                         dfs.append(parse_functions[report_type]['processor'](df))
                         attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
