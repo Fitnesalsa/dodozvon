@@ -266,6 +266,9 @@ class Database:
     def fetch(self, one: bool = False) -> Union[Tuple, List]:
         return self._cur.fetchone() if one else self._cur.fetchall()
 
+    def commit(self):
+        self._conn.commit()
+
     def close(self):
         # Make the changes to the database persistent
         self._conn.commit()

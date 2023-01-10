@@ -397,7 +397,7 @@ class DodoISParser:
                         attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
                     except DodoEmptyExcelError:
                         # "прокидываем" ошибку выше, но делаем исключения
-                        if report_type == 'promo':  # промокоды могут быть пустыми
+                        if report_type in ('promo', 'orders'):  # промокоды и заказы могут быть пустыми
                             attempts = 0
                         else:
                             if attempts == 0:
