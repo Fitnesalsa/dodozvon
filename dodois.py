@@ -469,7 +469,8 @@ class DodoISStorer(DatabaseWorker):
         try:
             self._db.execute(query, params)
         except (StringDataRightTruncation, NumericValueOutOfRange) as e:
-            print(params)
+            for row in params:
+                print(row)
             raise e
 
         # записываем дату последнего обновления в таблицу auth
