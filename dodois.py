@@ -399,7 +399,7 @@ class DodoISParser:
                         # "прокидываем" ошибку выше, но делаем исключения
                         if report_type in ('promo', 'orders'):  # промокоды и заказы могут быть пустыми
                             attempts = 0
-                            continue
+                            break
                         else:
                             if attempts == 0:
                                 # если это была последняя попытка, выкидываем ошибку
