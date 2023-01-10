@@ -168,7 +168,7 @@ class Database:
                 date TIMESTAMP WITH TIME ZONE,
                 order_id VARCHAR(11),
                 order_type INTEGER,
-                phone VARCHAR(12),
+                phone VARCHAR(20),
                 order_sum INTEGER,
                 status INTEGER,
                 UNIQUE (db_unit_id, date, order_id),
