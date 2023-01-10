@@ -306,6 +306,11 @@ class DodoISParser:
         df['Время'] = df['Время'].dt.tz_convert('UTC')
         df['Время продажи (печати чека)'] = df['Время продажи (печати чека)'].dt.tz_convert('UTC')
 
+        # Переводим id транзакции в номер
+        df['id транзакции'] = df['id транзакции'].astype(int)
+        print(df.info)
+
+
         return df
 
     @staticmethod
