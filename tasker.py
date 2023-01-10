@@ -243,3 +243,12 @@ class DatabaseTasker(DatabaseWorker):
             raise ValueError('wrong suffix!')
         self._storage.upload(filename, folder)
         os.remove(filename)
+
+    def _get_orders_params(self):
+        pass
+
+    def create_orders_tables(self, df: pd.DataFrame, bot_id: int, shop_name: str,
+                             start_date: datetime, end_date: datetime):
+        filename = f'Заказы_{shop_name}_{bot_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d})'
+
+        """)
