@@ -1,15 +1,15 @@
 import io
 import time
 from datetime import datetime, timedelta
-from typing import List, Tuple, Callable
+from typing import List, Tuple
 
 import pandas as pd
 import requests
-from asyncpg import StringDataRightTruncationError
 
 from pandas import CategoricalDtype
 
 import config
+from psycopg2.errors import StringDataRightTruncation
 from config import CONNECT_TIMEOUT
 from parser import DatabaseWorker
 from postgresql import Database
@@ -468,7 +468,7 @@ class DodoISStorer(DatabaseWorker):
                            """
         try:
             self._db.execute(query, params)
-        except StringDataRightTruncationError as e:
+        except StringDataRightTruncation as e:
             print(params)
             raise e
 
