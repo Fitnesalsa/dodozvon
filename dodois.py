@@ -459,7 +459,7 @@ class DodoISStorer(DatabaseWorker):
         # заказы
         params = []
         for row in df_orders.iterrows():
-            params.append((self._id, *row))
+            params.append((self._id, *row[1]))
         query = """INSERT INTO orders (db_unit_id, city, department, date, time, sales_time, order_id, order_type,
                            client_name, phone, order_sum, payment_type, status, operator, courier, reason, address,
                            order_it_int, transaction_id) VALUES %s
