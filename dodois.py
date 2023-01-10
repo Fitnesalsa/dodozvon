@@ -459,15 +459,11 @@ class DodoISStorer(DatabaseWorker):
         # заказы
         params = []
         for row in df_orders.iterrows():
-            params.append(row)
-        query = """INSERT INTO clients (db_unit_id, phone, first_order_datetime, first_order_city, 
-                           last_order_datetime, last_order_city, first_order_type, orders_amt, orders_sum,
-                           sms_text, sms_text_city, ftp_path_city) VALUES %s
-                           ON CONFLICT (phone) DO UPDATE
-                           SET (db_unit_id, last_order_datetime, last_order_city, orders_amt, orders_sum) = 
-                           (EXCLUDED.db_unit_id, EXCLUDED.last_order_datetime, EXCLUDED.last_order_city, 
-                           EXCLUDED.orders_amt + clients.orders_amt, EXCLUDED.orders_sum + clients.orders_sum)
-                           WHERE EXCLUDED.last_order_datetime > clients.last_order_datetime;
+            params.append((self._id, *row))
+        query = """INSERT INTO orders (db_unit_id, city, department, date, time, sales_time, order_id, order_type,
+                           client_name, phone, order_sum, payment_type, status, operator, courier, reason, address,
+                           order_it_int, transaction_id) VALUES %s
+                           ON CONFLICT (db_unit_id, date, order_id) DO NOTHING;
                            """
         self._db.execute(query, params)
 
