@@ -226,6 +226,10 @@ class DodoISParser:
         """
         if self._response.ok:
             result = io.BytesIO(self._response.content)
+            # test save file
+            with open('error.xlsx', 'wb') as f:
+                f.write(result.getbuffer())
+            result.seek(0)
             # При чтении вручную сохраняем все в тип "object" - аналог строки в pandas.
             # Конвертацию в правильные типы произведем позднее.
             return pd.read_excel(result, skiprows=skiprows, dtype='object')
@@ -398,9 +402,7 @@ class DodoISParser:
                         attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
                     except DodoEmptyExcelError:
                         # "прокидываем" ошибку выше, но делаем исключения
-                        if end_date < self._end_date:  # если пиццерия открылась после начала срока, не выдаем ошибку
-                            continue
-                        elif report_type == 'promo':  # промокоды могут быть пустыми
+                        if report_type == 'promo':  # промокоды могут быть пустыми
                             attempts = 0
                         else:
                             if attempts == 0:
@@ -434,7 +436,7 @@ class DodoISStorer(DatabaseWorker):
         :return: None
         """
         # клиентская статистика
-        if df_clients:
+        if df_clients is not None:
             params = []
             for row in df_clients.iterrows():
                 params.append((self._id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
@@ -453,7 +455,7 @@ class DodoISStorer(DatabaseWorker):
             self._db.execute(query, params)
 
         # заказы
-        if df_orders:
+        if df_orders is not None:
             params = []
             for row in df_orders.iterrows():
                 params.append((self._id, *row[1]))
@@ -465,7 +467,7 @@ class DodoISStorer(DatabaseWorker):
             self._db.execute(query, params)
 
         # записываем дату последнего обновления в таблицу auth
-        if df_clients or df_orders:
+        if df_clients is not None or df_orders is not None:
             self._db.execute("""
             UPDATE auth
             SET last_update = now() AT TIME ZONE 'UTC'
