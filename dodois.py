@@ -5,6 +5,7 @@ from typing import List, Tuple, Callable
 
 import pandas as pd
 import requests
+from asyncpg import StringDataRightTruncationError
 
 from pandas import CategoricalDtype
 
@@ -465,7 +466,11 @@ class DodoISStorer(DatabaseWorker):
                            order_it_int, transaction_id) VALUES %s
                            ON CONFLICT (db_unit_id, date, order_id) DO NOTHING;
                            """
-        self._db.execute(query, params)
+        try:
+            self._db.execute(query, params)
+        except StringDataRightTruncationError as e:
+            print(params)
+            raise e
 
         # записываем дату последнего обновления в таблицу auth
         self._db.execute("""
