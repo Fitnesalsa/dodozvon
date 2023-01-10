@@ -396,16 +396,19 @@ class DodoISParser:
                         dfs.append(parse_functions[report_type]['processor'](df))
                         attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
                     except DodoEmptyExcelError:
-                        # "прокидываем" ошибку выше, но делаем исключения
-                        if report_type in ('promo', 'orders'):  # промокоды и заказы могут быть пустыми
-                            attempts = 0
-                            break
-                        else:
-                            if attempts == 0:
-                                # если это была последняя попытка, выкидываем ошибку
-                                raise DodoEmptyExcelError
-                            # в противном случае спим 2 секунды и пробуем заново
-                            time.sleep(2)
+                        # ничего не делаем, логируем
+                        print(f'Выгружен пустой файл для {self._unit_name}: {start_date:%d.%m.%Y} - {end_date:%d.%m.%Y}')
+
+                        # # "прокидываем" ошибку выше, но делаем исключения
+                        # if report_type in ('promo', 'orders'):  # промокоды и заказы могут быть пустыми
+                        #     attempts = 0
+                        #     break
+                        # else:
+                        #     if attempts == 0:
+                        #         # если это была последняя попытка, выкидываем ошибку
+                        #         raise DodoEmptyExcelError
+                        #     # в противном случае спим 2 секунды и пробуем заново
+                        #     time.sleep(2)
                     except Exception as e:
                         # если вылезло другое исключение, выкидываем ошибку, если последняя попытка, или спим
                         if attempts == 0:
