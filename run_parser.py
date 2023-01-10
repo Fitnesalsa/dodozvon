@@ -10,11 +10,11 @@ from postgresql import Database
 
 debug = True
 
+
 def run():
     db = Database()
     db.connect()
-    db.close()
-    return
+
     bot = Bot()
 
     if debug:
