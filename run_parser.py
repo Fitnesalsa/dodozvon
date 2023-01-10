@@ -8,12 +8,18 @@ from feedback import FeedbackParser, FeedbackStorer
 from parameters import ParametersGetter
 from postgresql import Database
 
+debug = True
 
 def run():
     db = Database()
     db.connect()
 
     bot = Bot()
+
+    if debug:
+        log_func = print
+    else:
+        log_func = bot.send_message
 
     # обновляем данные таблицы units
     try:
@@ -23,7 +29,7 @@ def run():
         api_result = api_parser.parse()
         api_storer.store(api_result)
     except Exception as e:
-        print(f'Ошибка выгрузки DodoOpenAPI: {e}')
+        log_func(f'Ошибка выгрузки DodoOpenAPI: {e}')
         raise e
 
     # получаем параметры парсинга
@@ -32,7 +38,7 @@ def run():
         params_getter = ParametersGetter(db=db)
         params = params_getter.get_parsing_params()
     except Exception as e:
-        print(f'Ошибка получения параметров: {e}')
+        log_func(f'Ошибка получения параметров: {e}')
         raise e
 
     # передаем парсерам
@@ -45,11 +51,11 @@ def run():
             dodois_orders = dodois_parser.parse('orders')
             dodois_storer.store(dodois_clients_statistic, dodois_orders)
         except (ValueError, BadZipFile) as e:
-            print(f'{params_set[1]}: Что-то пошло не так ({e})')
+            log_func(f'{params_set[1]}: Что-то пошло не так ({e})')
         except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
-            print(f'{params_set[1]}: {e.message}')
+            log_func(f'{params_set[1]}: {e.message}')
         except Exception as e:
-            print(f'Ошибка выгрузки из Додо ИС: {e}')
+            log_func(f'Ошибка выгрузки из Додо ИС: {e}')
             raise e
 
     # обновляем таблицы с фидбеком
@@ -65,7 +71,7 @@ def run():
         if feedback_result:
             feedback_storer.store(*feedback_result)
     except Exception as e:
-        bot.send_message(f'Ошибка выгрузки файла с обзвоненными клиентами: {e}')
+        log_func(f'Ошибка выгрузки файла с обзвоненными клиентами: {e}')
         raise e
 
     print('Parsing complete!')
