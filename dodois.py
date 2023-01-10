@@ -9,7 +9,7 @@ import requests
 from pandas import CategoricalDtype
 
 import config
-from psycopg2.errors import StringDataRightTruncation
+from psycopg2.errors import StringDataRightTruncation, NumericValueOutOfRange
 from config import CONNECT_TIMEOUT
 from parser import DatabaseWorker
 from postgresql import Database
@@ -468,8 +468,9 @@ class DodoISStorer(DatabaseWorker):
                            """
         try:
             self._db.execute(query, params)
-        except StringDataRightTruncation as e:
-            print(params)
+        except (StringDataRightTruncation, NumericValueOutOfRange) as e:
+            print(e.cursor)
+            print(e.diag.column_name, e.diag.context, e.diag.internal_query, e.diag.message_detail, e.diag.context)
             raise e
 
         # записываем дату последнего обновления в таблицу auth
