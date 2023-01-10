@@ -182,7 +182,7 @@ class Database:
                 reason VARCHAR(100),
                 address BOOLEAN,
                 order_it_int INTEGER,
-                transaction_id INTEGER,
+                transaction_id BOOLEAN,
                 UNIQUE (db_unit_id, date, order_id),
                 CONSTRAINT fk_units
                     FOREIGN KEY (db_unit_id)

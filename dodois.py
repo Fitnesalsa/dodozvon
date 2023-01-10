@@ -280,7 +280,7 @@ class DodoISParser:
         """
         if len(df) == 0:
             raise DodoEmptyExcelError
-        df.to_excel(f'{self._unit_name} {self._start_date:%d.%m.%Y} {self._end_date:%d.%m.%Y}.xlsx')
+
         # Переводим всё, что можно, в категории
         order_type = CategoricalDtype(categories=['Доставка', 'Самовывоз', 'Ресторан'], ordered=True)
         df['Тип заказа'] = df['Тип заказа'].astype(order_type).cat.codes
@@ -293,8 +293,8 @@ class DodoISParser:
         df['Оператор заказа'] = df['Оператор заказа'].astype(operator_type).cat.codes
 
         # Сокращаем звездочки в логическое значение
-        df['Имя клиента'] = ~df['Имя клиента'].isna()
-        df['Адрес'] = ~df['Адрес'].isna()
+        df['Имя клиента'] = df['Имя клиента'].notna()
+        df['Адрес'] = df['Адрес'].notna()
 
         # Сохраняем tz в даты
         df['Дата'] = df['Дата'].dt.tz_localize(self._this_timezone)
@@ -306,9 +306,8 @@ class DodoISParser:
         df['Время'] = df['Время'].dt.tz_convert('UTC')
         df['Время продажи (печати чека)'] = df['Время продажи (печати чека)'].dt.tz_convert('UTC')
 
-        # Переводим id транзакции в номер
-        df['id транзакции'].fillna(0, inplace=True)
-        df['id транзакции'] = df['id транзакции'].astype(int)
+        # Переводим id транзакции в логическое
+        df['id транзакции'] = df['id транзакции'].notna()
 
         return df
 
