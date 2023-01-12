@@ -381,7 +381,7 @@ class DodoISParser:
         dfs = []
         # делим общий интервал на субинтервалы
         for start_date, end_date in self._split_time_params(self._start_date, self._end_date):
-            print(f'parsing from {start_date:%d.%m.%Y} to {end_date:%d.%m.%Y}')
+            # print(f'parsing from {start_date:%d.%m.%Y} to {end_date:%d.%m.%Y}')
             for promo in self._promos:
                 # задаем количество попыток для запросов
                 attempts = config.PARSE_ATTEMPTS
@@ -396,7 +396,7 @@ class DodoISParser:
                         dfs.append(parse_functions[report_type]['processor'](df))
                         attempts = 0  # если всё получилось и исключение не сработало, обнуляем счетчик попыток сразу
                     except DodoEmptyExcelError:
-                        # ничего не делаем, логируем
+                        # ничего не делаем, логируем, пробуем дальше
                         print(f'Выгружен пустой файл для {self._unit_name}: {start_date:%d.%m.%Y} - {end_date:%d.%m.%Y}')
 
                         # # "прокидываем" ошибку выше, но делаем исключения

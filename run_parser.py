@@ -8,7 +8,7 @@ from feedback import FeedbackParser, FeedbackStorer
 from parameters import ParametersGetter
 from postgresql import Database
 
-debug = True
+debug = False
 
 
 def run():
@@ -49,9 +49,7 @@ def run():
             dodois_parser = DodoISParser(*params_set)
             dodois_storer = DodoISStorer(id_, db=db)
             dodois_clients_statistic = dodois_parser.parse('clients_statistic')
-            print('client statistic parsed')
             dodois_orders = dodois_parser.parse('orders')
-            print('orders parsed')
             dodois_storer.store(dodois_clients_statistic, dodois_orders)
             db.commit()  # после каждой пиццерии
         except (ValueError, BadZipFile) as e:
@@ -78,7 +76,7 @@ def run():
         log_func(f'Ошибка выгрузки файла с обзвоненными клиентами: {e}')
         raise e
 
-    print('Parsing complete!')
+    # print('Parsing complete!')
 
     # закрываем соединение
     db.close()
