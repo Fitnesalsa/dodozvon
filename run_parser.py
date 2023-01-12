@@ -76,7 +76,7 @@ def run():
         log_func(f'Ошибка выгрузки файла с обзвоненными клиентами: {e}')
         raise e
 
-    # print('Parsing complete!')
+    print('Parsing complete!')
 
     # закрываем соединение
     db.close()
