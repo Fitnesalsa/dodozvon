@@ -306,7 +306,9 @@ class DatabaseTasker(DatabaseWorker):
             FROM units u
             JOIN manager m ON u.id = m.db_unit_id
             JOIN auth a ON u.id = a.db_unit_id
-            WHERE a.is_active = true;
+            WHERE a.is_active = true
+                AND m.custom_start_date IS NOT NULL
+                AND m.custom_end_date IS NOT NULL;
         """)
         return self._db.fetch()
 
