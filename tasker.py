@@ -347,5 +347,5 @@ class DatabaseTasker(DatabaseWorker):
 
             filename = f'Заказы_{shop_name}_{bot_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d})'
             df.to_excel(filename, index=False)
-            #self._storage.upload(filename, YANDEX_ORDERS_FOLDER)
-            #os.remove(filename)
+            self._storage.upload(filename, YANDEX_ORDERS_FOLDER)
+            os.remove(filename)

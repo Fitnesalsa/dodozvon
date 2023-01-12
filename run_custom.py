@@ -55,7 +55,7 @@ def run():
             raise e
 
     # заказы
-
+    tasker.create_orders_tables()
 
     print('all tasks completed.')
 
