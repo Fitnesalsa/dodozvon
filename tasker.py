@@ -322,7 +322,7 @@ class DatabaseTasker(DatabaseWorker):
                     AND o.date <= %s;
             """, (db_unit_id, start_date, end_date + timedelta(days=1)))
 
-            df = pd.read_table(self._db.fetch(), columns = [
+            df = pd.DataFrame(self._db.fetch(), columns = [
                 'id', 'db_unit_id', 'Дата', '№ заказа', 'Тип заказа', 'Номер телефона', 'Сумма заказа',
                 'Статус заказа', 'Отдел'])
 
