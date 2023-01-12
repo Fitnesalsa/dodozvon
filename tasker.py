@@ -347,7 +347,7 @@ class DatabaseTasker(DatabaseWorker):
                      'Имя клиента', 'Номер телефона', 'Сумма заказа', 'Способ оплаты', 'Статус заказа',
                      'Оператор заказа', 'Курьер', 'Причина просрочки', 'Адрес', 'id заказа', 'id транзакции']]
 
-            filename = f'Заказы_{shop_name}_{bot_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d})'
+            filename = f'Заказы_{shop_name}_{bot_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
             df.to_excel(filename, index=False)
             self._storage.upload(filename, YANDEX_ORDERS_FOLDER)
             os.remove(filename)
