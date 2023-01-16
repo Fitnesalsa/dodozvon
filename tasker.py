@@ -329,7 +329,7 @@ class DatabaseTasker(DatabaseWorker):
                 'Статус заказа', 'Отдел'])
 
             # восстановление полей таблицы
-            df['Подразделение'] = df['Отдел'].str.match(r'.+(?=-)')
+            df['Подразделение'] = df['Отдел'].str.extract(r'(.+)(?=-)')
             df['Дата'] = df['Дата'].dt.tz_convert(config.TIMEZONES[tz_shift]).dt.tz_localize(None)
             df['Время'] = df['Дата']
             df['Время продажи (печати чека)'] = 0
