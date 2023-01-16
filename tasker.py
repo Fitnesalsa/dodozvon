@@ -234,7 +234,7 @@ class DatabaseTasker(DatabaseWorker):
         self._db.execute("""
             SELECT 
                 u.id,
-                m.bot_id,
+                m.customer_id,
                 u.unit_id, 
                 u.unit_name, 
                 a.login, 
@@ -251,7 +251,8 @@ class DatabaseTasker(DatabaseWorker):
             WHERE a.is_active = true AND
                 m.new_shop_exclude = false AND
                 m.custom_start_date IS NOT NULL AND
-                m.custom_end_date IS NOT NULL;
+                m.custom_end_date IS NOT NULL AND
+                m.new_clients_promos_all IS NOT NULL;
         """)
         return self._db.fetch()
 
@@ -259,7 +260,7 @@ class DatabaseTasker(DatabaseWorker):
         self._db.execute("""
             SELECT 
                 u.id,
-                m.bot_id,
+                m.customer_id,
                 u.unit_id, 
                 u.unit_name, 
                 a.login, 
@@ -276,14 +277,15 @@ class DatabaseTasker(DatabaseWorker):
             WHERE a.is_active = true AND
                 m.lost_shop_exclude = false AND
                 m.custom_start_date IS NOT NULL AND
-                m.custom_end_date IS NOT NULL;
+                m.custom_end_date IS NOT NULL AND
+                m.lost_clients_promos_all IS NOT NULL;
         """)
         return self._db.fetch()
 
-    def create_promo_tables(self, df: pd.DataFrame, bot_id: int, shop_name: str,
+    def create_promo_tables(self, df: pd.DataFrame, customer_id: int, shop_name: str,
                             start_date: datetime, end_date: datetime,
                             suffix: str):
-        filename = f'Расход промо-кодов_{shop_name}_{suffix}_{bot_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
+        filename = f'Расход промо-кодов_{shop_name}_{suffix}_{customer_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
         df.to_excel(filename, index=False)
         if suffix == 'НК':
             folder = YANDEX_NEW_PROMO_FOLDER
@@ -300,7 +302,7 @@ class DatabaseTasker(DatabaseWorker):
                 u.id,
                 u.unit_name,
                 u.tz_shift,
-                m.bot_id,
+                m.customer_id,
                 m.custom_start_date,
                 m.custom_end_date
             FROM units u
@@ -313,7 +315,7 @@ class DatabaseTasker(DatabaseWorker):
         return self._db.fetch()
 
     def create_orders_tables(self):
-        for db_unit_id, shop_name, tz_shift, bot_id, start_date, end_date in self._get_orders_params():
+        for db_unit_id, shop_name, tz_shift, customer_id, start_date, end_date in self._get_orders_params():
             self._db.execute("""
                 SELECT o.*, u.unit_name FROM orders o
                 JOIN units u ON u.id = o.db_unit_id
@@ -347,7 +349,7 @@ class DatabaseTasker(DatabaseWorker):
                      'Имя клиента', 'Номер телефона', 'Сумма заказа', 'Способ оплаты', 'Статус заказа',
                      'Оператор заказа', 'Курьер', 'Причина просрочки', 'Адрес', 'id заказа', 'id транзакции']]
 
-            filename = f'Заказы_{shop_name}_{bot_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
+            filename = f'Заказы_{shop_name}_{customer_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
             df.to_excel(filename, index=False)
             self._storage.upload(filename, YANDEX_ORDERS_FOLDER)
             os.remove(filename)
