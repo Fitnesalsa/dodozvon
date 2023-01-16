@@ -6,6 +6,7 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 
 import config
+from dodois import DodoEmptyExcelError
 from storage import YandexDisk
 from config import YANDEX_NEW_CLIENTS_FOLDER, YANDEX_LOST_CLIENTS_FOLDER, YANDEX_NEW_PROMO_FOLDER, \
     YANDEX_LOST_PROMO_FOLDER, YANDEX_ORDERS_FOLDER
@@ -329,6 +330,10 @@ class DatabaseTasker(DatabaseWorker):
             df = pd.DataFrame(self._db.fetch(), columns = [
                 'id', 'db_unit_id', 'Дата', '№ заказа', 'Тип заказа', 'Номер телефона', 'Сумма заказа',
                 'Статус заказа', 'Отдел'])
+
+            if len(df) > 0:
+                raise DodoEmptyExcelError(f'Выгружен пустой файл Excel для пиццерии {shop_name}. Возможно,'
+                                          f' на сервере нет заказов от этой пиццерии.')
 
             # восстановление полей таблицы
             df['Подразделение'] = df['Отдел'].str.extract(r'(.+)(?=-)')

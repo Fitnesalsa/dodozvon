@@ -55,7 +55,10 @@ def run():
             raise e
 
     # заказы
-    tasker.create_orders_tables()
+    try:
+        tasker.create_orders_tables()
+    except DodoEmptyExcelError as e:
+        print(e.message)
 
     print('all tasks completed.')
 
