@@ -285,7 +285,7 @@ class DatabaseTasker(DatabaseWorker):
     def create_promo_tables(self, df: pd.DataFrame, customer_id: int, shop_name: str,
                             start_date: datetime, end_date: datetime,
                             suffix: str):
-        filename = f'Расход промо-кодов_{shop_name}_{suffix}_{customer_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
+        filename = f'Расход промо-кодов_{customer_id}_{shop_name}_{suffix}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
         df.to_excel(filename, index=False)
         if suffix == 'НК':
             folder = YANDEX_NEW_PROMO_FOLDER
@@ -316,13 +316,15 @@ class DatabaseTasker(DatabaseWorker):
 
     def create_orders_tables(self):
         for db_unit_id, shop_name, tz_shift, customer_id, start_date, end_date in self._get_orders_params():
+            start_date_full = datetime(start_date.year, start_date.month, start_date.day, 0, 0) - timedelta(hours=tz_shift)
+            end_date_full = datetime(end_date.year, end_date.month, end_date.day, 0) - timedelta(hours=tz_shift)
             self._db.execute("""
                 SELECT o.*, u.unit_name FROM orders o
                 JOIN units u ON u.id = o.db_unit_id
                 WHERE o.db_unit_id = %s
                     AND o.date >= %s
                     AND o.date <= %s;
-            """, (db_unit_id, start_date, end_date + timedelta(days=1)))
+            """, (db_unit_id, start_date_full, end_date_full + timedelta(days=1)))
 
             df = pd.DataFrame(self._db.fetch(), columns = [
                 'id', 'db_unit_id', 'Дата', '№ заказа', 'Тип заказа', 'Номер телефона', 'Сумма заказа',
@@ -349,7 +351,7 @@ class DatabaseTasker(DatabaseWorker):
                      'Имя клиента', 'Номер телефона', 'Сумма заказа', 'Способ оплаты', 'Статус заказа',
                      'Оператор заказа', 'Курьер', 'Причина просрочки', 'Адрес', 'id заказа', 'id транзакции']]
 
-            filename = f'Заказы_{shop_name}_{customer_id}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
+            filename = f'Заказы_{customer_id}_{shop_name}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
             df.to_excel(filename, index=False)
             self._storage.upload(filename, YANDEX_ORDERS_FOLDER)
             os.remove(filename)
