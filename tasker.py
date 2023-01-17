@@ -326,7 +326,7 @@ class DatabaseTasker(DatabaseWorker):
                 WHERE o.db_unit_id = %s
                     AND o.date >= %s
                     AND o.date < %s;
-            """, (db_unit_id, start_date_full.date(), (end_date_full + timedelta(days=1)).date()))
+            """, (db_unit_id, start_date_full, (end_date_full + timedelta(days=1))))
 
             df = pd.DataFrame(self._db.fetch(), columns = [
                 'id', 'db_unit_id', 'Дата', '№ заказа', 'Тип заказа', 'Номер телефона', 'Сумма заказа',
