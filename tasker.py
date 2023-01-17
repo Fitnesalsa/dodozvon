@@ -317,9 +317,6 @@ class DatabaseTasker(DatabaseWorker):
 
     def create_orders_tables(self):
         for db_unit_id, shop_name, tz_shift, customer_id, start_date, end_date in self._get_orders_params():
-            if db_unit_id != 403:
-                continue
-            print(db_unit_id, shop_name, tz_shift, customer_id, start_date, end_date)
             start_date_full = datetime(start_date.year, start_date.month, start_date.day, 0, 0) - timedelta(hours=tz_shift)
             end_date_full = datetime(end_date.year, end_date.month, end_date.day, 0) - timedelta(hours=tz_shift)
             self._db.execute("""
@@ -338,7 +335,6 @@ class DatabaseTasker(DatabaseWorker):
                 raise DodoEmptyExcelError(f'Выгружен пустой файл Excel для пиццерии {shop_name}. Возможно,'
                                           f' на сервере нет заказов от этой пиццерии.')
             else:
-                print(df.head())
                 # восстановление полей таблицы
                 df['Подразделение'] = df['Отдел'].str.extract(r'(.+)(?=-)')
                 df['Дата'] = df['Дата'].dt.tz_convert(config.TIMEZONES[tz_shift]).dt.tz_localize(None)
@@ -362,5 +358,5 @@ class DatabaseTasker(DatabaseWorker):
 
                 filename = f'Заказы_{customer_id}_{shop_name}_({start_date:%Y-%m-%d} - {end_date:%Y-%m-%d}).xlsx'
                 df.to_excel(filename, index=False)
-                #self._storage.upload(filename, YANDEX_ORDERS_FOLDER)
-                #os.remove(filename)
+                self._storage.upload(filename, YANDEX_ORDERS_FOLDER)
+                os.remove(filename)
