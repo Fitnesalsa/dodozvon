@@ -56,6 +56,7 @@ def run():
 
     # заказы
     try:
+        print('parsing orders...')
         tasker.create_orders_tables()
     except DodoEmptyExcelError as e:
         print(e.message)

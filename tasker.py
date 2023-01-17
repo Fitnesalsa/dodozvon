@@ -317,6 +317,7 @@ class DatabaseTasker(DatabaseWorker):
 
     def create_orders_tables(self):
         for db_unit_id, shop_name, tz_shift, customer_id, start_date, end_date in self._get_orders_params():
+            print(f'parsing orders for {shop_name}...')
             start_date_full = datetime(start_date.year, start_date.month, start_date.day, 0, 0) - timedelta(hours=tz_shift)
             end_date_full = datetime(end_date.year, end_date.month, end_date.day, 0) - timedelta(hours=tz_shift)
             self._db.execute("""
@@ -360,3 +361,4 @@ class DatabaseTasker(DatabaseWorker):
                 df.to_excel(filename, index=False)
                 self._storage.upload(filename, YANDEX_ORDERS_FOLDER)
                 os.remove(filename)
+                print(f'orders for {shop_name} uploaded successfully!')
