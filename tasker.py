@@ -338,6 +338,7 @@ class DatabaseTasker(DatabaseWorker):
                 raise DodoEmptyExcelError(f'Выгружен пустой файл Excel для пиццерии {shop_name}. Возможно,'
                                           f' на сервере нет заказов от этой пиццерии.')
             else:
+                print(df.head())
                 # восстановление полей таблицы
                 df['Подразделение'] = df['Отдел'].str.extract(r'(.+)(?=-)')
                 df['Дата'] = df['Дата'].dt.tz_convert(config.TIMEZONES[tz_shift]).dt.tz_localize(None)
