@@ -318,7 +318,7 @@ class DatabaseTasker(DatabaseWorker):
     def create_orders_tables(self):
         for db_unit_id, shop_name, tz_shift, customer_id, start_date, end_date in self._get_orders_params():
             if db_unit_id != 403:
-                return
+                continue
             print(db_unit_id, shop_name, tz_shift, customer_id, start_date, end_date)
             start_date_full = datetime(start_date.year, start_date.month, start_date.day, 0, 0) - timedelta(hours=tz_shift)
             end_date_full = datetime(end_date.year, end_date.month, end_date.day, 0) - timedelta(hours=tz_shift)
