@@ -21,38 +21,38 @@ def run():
 
     # новые клиенты - промо
 
-    for id_, customer_id, *params in tasker.get_new_promo_params():
-        try:
-            print(f'parsing new clients promos for id {id_}, params {params}')
-            dodois_parser = DodoISParser(*params)
-            dodois_result = dodois_parser.parse('promo')
-            tasker.create_promo_tables(dodois_result, customer_id, params[1], params[5], params[6], 'НК')
-            print(f'creating new clients promo report for id {id_} completed.')
-
-        except (ValueError, BadZipFile) as e:
-            print(f'{params[1]}: Что-то пошло не так ({e})')
-        except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
-            print(f'{params[1]}: {e.message}')
-        except Exception as e:
-            print(f'Ошибка выгрузки из Додо ИС: {e}')
-            raise e
+    # for id_, customer_id, *params in tasker.get_new_promo_params():
+    #     try:
+    #         print(f'parsing new clients promos for id {id_}, params {params}')
+    #         dodois_parser = DodoISParser(*params)
+    #         dodois_result = dodois_parser.parse('promo')
+    #         tasker.create_promo_tables(dodois_result, customer_id, params[1], params[5], params[6], 'НК')
+    #         print(f'creating new clients promo report for id {id_} completed.')
+    #
+    #     except (ValueError, BadZipFile) as e:
+    #         print(f'{params[1]}: Что-то пошло не так ({e})')
+    #     except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
+    #         print(f'{params[1]}: {e.message}')
+    #     except Exception as e:
+    #         print(f'Ошибка выгрузки из Додо ИС: {e}')
+    #         raise e
 
     # потоерянные клиенты - промо
-    for id_, customer_id, *params in tasker.get_lost_promo_params():
-        try:
-            print(f'parsing lost clients promos for id {id_}, params {params}')
-            dodois_parser = DodoISParser(*params)
-            dodois_result = dodois_parser.parse('promo')
-            tasker.create_promo_tables(dodois_result, customer_id, params[1], params[5], params[6], 'ПК')
-            print(f'creating lost clients promo report for id {id_} completed.')
-
-        except (ValueError, BadZipFile) as e:
-            print(f'{params[1]}: Что-то пошло не так ({e})')
-        except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
-            print(f'{params[1]}: {e.message}')
-        except Exception as e:
-            print(f'Ошибка выгрузки из Додо ИС: {e}')
-            raise e
+    # for id_, customer_id, *params in tasker.get_lost_promo_params():
+    #     try:
+    #         print(f'parsing lost clients promos for id {id_}, params {params}')
+    #         dodois_parser = DodoISParser(*params)
+    #         dodois_result = dodois_parser.parse('promo')
+    #         tasker.create_promo_tables(dodois_result, customer_id, params[1], params[5], params[6], 'ПК')
+    #         print(f'creating lost clients promo report for id {id_} completed.')
+    #
+    #     except (ValueError, BadZipFile) as e:
+    #         print(f'{params[1]}: Что-то пошло не так ({e})')
+    #     except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
+    #         print(f'{params[1]}: {e.message}')
+    #     except Exception as e:
+    #         print(f'Ошибка выгрузки из Додо ИС: {e}')
+    #         raise e
 
     # заказы
     try:
