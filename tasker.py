@@ -262,7 +262,7 @@ class DatabaseTasker(DatabaseWorker):
         self._db.execute("""
             SELECT 
                 u.id,
-                m.customer_id,,
+                m.customer_id,
                 u.unit_id,
                 u.uuid,
                 u.unit_name, 
