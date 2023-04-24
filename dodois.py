@@ -269,6 +269,7 @@ class DodoISParser:
                                         cookies=cj)
 
                 self._authorized = True
+                print('authorized successfully')
                 return
         except Exception as e:
             print(f'Ошибка авторизации для пиццерии {self._unit_id}')

@@ -30,9 +30,9 @@ def run():
             print(f'creating new clients promo report for id {id_} completed.')
 
         except (ValueError, BadZipFile) as e:
-            print(f'{params[1]}: Что-то пошло не так ({e})')
+            print(f'{params[2]}: Что-то пошло не так ({e})')
         except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
-            print(f'{params[1]}: {e.message}')
+            print(f'{params[2]}: {e.message}')
         except Exception as e:
             print(f'Ошибка выгрузки из Додо ИС: {e}')
             raise e
@@ -47,9 +47,9 @@ def run():
             print(f'creating lost clients promo report for id {id_} completed.')
 
         except (ValueError, BadZipFile) as e:
-            print(f'{params[1]}: Что-то пошло не так ({e})')
+            print(f'{params[2]}: Что-то пошло не так ({e})')
         except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
-            print(f'{params[1]}: {e.message}')
+            print(f'{params[2]}: {e.message}')
         except Exception as e:
             print(f'Ошибка выгрузки из Додо ИС: {e}')
             raise e

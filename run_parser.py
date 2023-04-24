@@ -53,9 +53,9 @@ def run():
             dodois_storer.store(dodois_clients_statistic, dodois_orders)
             db.commit()  # после каждой пиццерии
         except (ValueError, BadZipFile) as e:
-            log_func(f'{params_set[1]}: Что-то пошло не так ({e})')
+            log_func(f'{params_set[2}: Что-то пошло не так ({e})')
         except (DodoAuthError, DodoResponseError, DodoEmptyExcelError) as e:
-            log_func(f'{params_set[1]}: {e.message}')
+            log_func(f'{params_set[2]}: {e.message}')
         except Exception as e:
             log_func(f'Ошибка выгрузки из Додо ИС: {e}')
             raise e
