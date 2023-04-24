@@ -1,4 +1,5 @@
 import io
+import re
 import time
 from datetime import datetime, timedelta
 from typing import List, Tuple
@@ -13,6 +14,8 @@ from psycopg2.errors import StringDataRightTruncation, NumericValueOutOfRange
 from config import CONNECT_TIMEOUT
 from parser import DatabaseWorker
 from postgresql import Database
+from bs4 import BeautifulSoup
+
 
 
 class DodoAuthError(Exception):
@@ -49,6 +52,7 @@ class DodoISParser:
     Один экземпляр класса отвечает за доступ только к одной пиццерии. Если нужен доступ к нескольким пиццериям,
     нужно создать несколько экземпляров класса.
     :param unit_id: int внутренний id пиццерии согласно API Dodo (хранится в таблице units)
+    :param uuid: длинный id пиццерии, хранится в таблице units
     :param unit_name: str название пиццерии согласно принципам наименования пиццерий (хранится в таблице units)
     :param login: str учетная запись, хранится в таблице auth
     :param password: str пароль, хранится в таблице auth
@@ -61,21 +65,21 @@ class DodoISParser:
     последовательно.
     """
 
-    def __init__(self, unit_id: int, unit_name: str, login: str, password: str, tz_shift: int,
+    def __init__(self, unit_id: int, uuid: str, unit_name: str, login: str, password: str, tz_shift: int,
                  start_date: datetime, end_date: datetime, promos: str):
         # заголовки для запроса с авторизацией
-        self._headers_auth = {'origin': 'https://auth.dodopizza.ru',
-                              'referer': 'https://auth.dodopizza.ru/Authenticate/LogOn',
-                              'User-Agent': 'dodoextbot'}
-        # данные для POST-запроса авторизации
-        self._auth_payload = {'State': '',
-                              'fromSiteId': '',
-                              'CountryCode': 'Ru',
-                              'login': login,
-                              'password': [password, 'ltr']}
+        self._headers_auth = {'User-Agent': 'dodoextbot'}
+        # данные для входа
+        self._login = login
+        self._password = password
+        self._uuid = uuid
+        # адреса страниц
+        self._auth_url = 'https://auth.dodois.io/'
+        self._ofman_url = 'https://officemanager.dodopizza.ru/'
         # флаг для определения статуса авторизации
         self._authorized = False
-        self._session = requests.Session()
+        self._session = requests.session()
+        self._session.headers = self._headers_auth
         # переменная для сохранения результата запроса
         self._response = None
         self._unit_id = unit_id
@@ -128,22 +132,147 @@ class DodoISParser:
                 break
         return result_dates
 
+    @staticmethod
+    def bs_preprocess(html: str) -> str:
+        """
+        remove distracting whitespaces and newline characters
+        from https://groups.google.com/g/beautifulsoup/c/F3sdgObXbO4?pli=1
+        """
+        pat = re.compile(r'(^[\s]+)|([\s]+$)', re.MULTILINE)
+        html = re.sub(pat, '', html)  # remove leading and trailing whitespaces
+        html = re.sub(r'\n', ' ', html)  # convert newlines to spaces
+        # this preserves newline delimiters
+        html = re.sub(r'[\s]+<', '<', html)  # remove whitespaces before opening tags
+        html = re.sub(r'>[\s]+', '>', html)  # remove whitespaces after closing tags
+        return html
+
     def _auth(self) -> None:
         """
         Авторизуемся в Додо ИС с текущими параметрами. Авторизация выполняется один раз перед началом запросов.
         Срок действия авторизации в Додо ИС - около 15 минут в случае неактивности.
         :return: None
         """
-        if not self._authorized:
-            response = self._session.post('https://auth.dodopizza.ru/Authenticate/LogOn',
-                                          data=self._auth_payload,
-                                          headers=self._headers_auth,
-                                          allow_redirects=True, timeout=CONNECT_TIMEOUT)
-            if response.ok and response.url != 'https://auth.dodopizza.ru/Authenticate/LogOn':
-                self._authorized = True
 
-            elif response.url == 'https://auth.dodopizza.ru/Authenticate/LogOn':
-                raise DodoAuthError('Ошибка авторизации. Проверьте правильность данных.')
+        try:
+            if not self._authorized:
+
+                # Шаг 1
+                response = self._session.get(self._ofman_url)
+                soup = BeautifulSoup(self.bs_preprocess(response.text), 'html.parser')
+                r_vals = {'client_id': '', 'redirect_uri': '', 'response_type': '',
+                          'scope': '', 'code_challenge': '', 'code_challenge_method': '',
+                          'response_mode': '', 'nonce': '', 'state': ''}
+                for key in r_vals.keys():
+                    r_vals[key] = soup.find(attrs={'name': key})['value']
+
+                # step 2
+                self._session.headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
+                response = self._session.post(self._auth_url + 'connect/authorize', data=r_vals)
+                soup = BeautifulSoup(self.bs_preprocess(response.text), 'html.parser')
+                request_verification_token = soup.find(attrs={'name': '__RequestVerificationToken'})['value']
+                return_url = soup.find(attrs={'name': 'ReturnUrl'})['value']
+                cookie_anti_forg_name = ''
+                cookie_anti_forg_val = ''
+                for cookie in response.cookies.keys():
+                    if cookie.startswith('.AspNetCore.Antiforgery.'):
+                        cookie_anti_forg_name = cookie
+                        cookie_anti_forg_val = response.cookies[cookie]
+                        break
+                cj = requests.utils.cookiejar_from_dict({cookie_anti_forg_name: cookie_anti_forg_val})
+
+                # step 3
+                data = {
+                    'ReturnUrl': return_url,
+                    'Username': self._login,
+                    'Password': self._password,
+                    'TenantName': 'dodopizza',
+                    'CountryCode': 'Ru',
+                    'authMethod': 'local',
+                    '__RequestVerificationToken': request_verification_token,
+                    'RememberLogin': 'false'
+                }
+
+                self._session.headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
+                response = self._session.post(self._auth_url + 'account/login', data=data, cookies=cj)
+                soup = BeautifulSoup(self.bs_preprocess(response.text), 'html.parser')
+                r_vals = {'code': '', 'scope': '', 'state': '', 'session_state': ''}
+                for key in r_vals.keys():
+                    r_vals[key] = soup.find(attrs={'name': key})['value']
+                cookie_open_id_name = ''
+                cookie_open_id_val = ''
+                cookie_corr_name = ''
+                cookie_corr_val = ''
+                c_dict = self._session.cookies.get_dict()
+                for cookie in c_dict.keys():
+                    if cookie.startswith('.AspNetCore.OpenIdConnect.Nonce.'):
+                        cookie_open_id_name = cookie
+                        cookie_open_id_val = c_dict[cookie]
+                    elif cookie.startswith('.AspNetCore.Correlation.'):
+                        cookie_corr_name = cookie
+                        cookie_corr_val = c_dict[cookie]
+                cookie_idsrv_s = c_dict['idsrv.session']
+                cookie_idsrv = c_dict['idsrv']
+                cj = requests.utils.cookiejar_from_dict({
+                    cookie_open_id_name: cookie_open_id_val,
+                    cookie_corr_name: cookie_corr_val
+                })
+
+                # step 4
+                response = self._session.post(self._ofman_url + 'signin-oidc', data=r_vals, cookies=cj)
+                if 'OfficeManager/OperationalStatistics' not in response.url:
+                    soup = BeautifulSoup(self.bs_preprocess(response.text), 'html.parser')
+                    request_verification_token = soup.find(attrs={'name': '__RequestVerificationToken'})['value']
+
+                    cookie_anti_forg_name = ''
+                    cookie_anti_forg_val = ''
+                    c_dict = self._session.cookies.get_dict()
+                    for cookie in c_dict.keys():
+                        if cookie.startswith('.AspNetCore.Antiforgery.') and '-' not in cookie:
+                            cookie_anti_forg_name = cookie
+                            cookie_anti_forg_val = response.cookies[cookie]
+                    cookie_oidc_off = c_dict['.AspNetCore.oidc-offmngr-c']
+                    cookie_sess_off = c_dict['.AspNetCore.Session.OfficeManager']
+                    cj = requests.utils.cookiejar_from_dict({
+                        'AspNetCore.oidc-offmngr-c': cookie_oidc_off,
+                        cookie_anti_forg_name: cookie_anti_forg_val,
+                        '.AspNetCore.Session.OfficeManager': cookie_sess_off
+                    })
+
+                    # step 5
+                    data = {'roleId': 7, '__RequestVerificationToken': request_verification_token}
+                    response = self._session.post(self._ofman_url + 'Infrastructure/Authenticate/SelectRole',
+                                                        data=data, cookies=cj)
+                    if 'OfficeManager/OperationalStatistics' not in response.url:
+                        soup = BeautifulSoup(self.bs_preprocess(response.text), 'html.parser')
+                        request_verification_token = soup.find(attrs={'name': '__RequestVerificationToken'})['value']
+                        cookie_oidc_off = self._session.cookies.get_dict()['.AspNetCore.oidc-offmngr-c']
+                        cj = requests.utils.cookiejar_from_dict({
+                            'AspNetCore.oidc-offmngr-c': cookie_oidc_off,
+                            cookie_anti_forg_name: cookie_anti_forg_val,
+                            '.AspNetCore.Session.OfficeManager': cookie_sess_off
+                        })
+
+                        # step 6
+                        data = {'uuid': self._uuid, '__RequestVerificationToken': request_verification_token}
+                        response = self._session.post(self._ofman_url +
+                                                            'Infrastructure/Authenticate/SelectDepartment',
+                                                            data=data, cookies=cj)
+                    cookie_oidc_off = c_dict = self._session.cookies.get_dict()['.AspNetCore.oidc-offmngr-c']
+                    cj = requests.utils.cookiejar_from_dict({
+                        'AspNetCore.oidc-offmngr-c': cookie_oidc_off,
+                        cookie_anti_forg_name: cookie_anti_forg_val,
+                        '.AspNetCore.Session.OfficeManager': cookie_sess_off
+                    })
+
+                # send test request to update session cookies
+                self._session.get(self._ofman_url + 'OfficeManager/OperationalStatistics',
+                                        cookies=cj)
+
+                self._authorized = True
+                return
+        except Exception as e:
+            print(f'Ошибка авторизации для пиццерии {self._unit_id}')
+            raise e
 
     def _parse_clients_statistic(self, **kwargs) -> None:
         """

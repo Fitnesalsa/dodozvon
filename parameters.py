@@ -21,7 +21,7 @@ class ParametersGetter(DatabaseWorker):
         """
         self._db.execute(
             """
-            SELECT u.id, u.unit_id, u.unit_name, u.tz_shift, a.login, a.password, a.last_update, u.begin_date_work
+            SELECT u.id, u.unit_id, u.uuid, u.unit_name, u.tz_shift, a.login, a.password, a.last_update, u.begin_date_work
             FROM units u
             JOIN auth a ON u.id = a.db_unit_id
             WHERE a.is_active = true
@@ -37,7 +37,9 @@ class ParametersGetter(DatabaseWorker):
         :return: список параметров в кортежах.
         """
         units_to_parse = []
-        for (id_, unit_id, unit_name, tz_shift, login, password, last_update, begin_work_date) in self._get_units_from_db():
+        for (
+                id_, unit_id, uuid, unit_name, tz_shift, login, password, last_update, begin_work_date
+        ) in self._get_units_from_db():
             # местное время пиццерии
             local_time = datetime.now(timezone.utc) + timedelta(hours=tz_shift)
             # конец интервала - всегда вчера
@@ -49,7 +51,7 @@ class ParametersGetter(DatabaseWorker):
             # если обновляли и меньше чем полтора года назад, обновляем с этого времени
             else:
                 start_date = last_update
-            units_to_parse.append((id_, unit_id, unit_name, login, password, tz_shift,
+            units_to_parse.append((id_, unit_id, uuid, unit_name, login, password, tz_shift,
                                    start_date.date(), end_date.date(), 'empty'))  # какой пиздец костыль ПЕРЕПИСАТЬ ЭТО ГОВНО
         # закрываем соединение с БД, если открывали
         self.db_close()
