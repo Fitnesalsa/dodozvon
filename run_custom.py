@@ -26,7 +26,7 @@ def run():
             print(f'parsing new clients promos for id {id_}, params {params}')
             dodois_parser = DodoISParser(*params)
             dodois_result = dodois_parser.parse('promo')
-            tasker.create_promo_tables(dodois_result, customer_id, params[1], params[6], params[7], 'НК')
+            tasker.create_promo_tables(dodois_result, customer_id, params[2], params[6], params[7], 'НК')
             print(f'creating new clients promo report for id {id_} completed.')
 
         except (ValueError, BadZipFile) as e:
@@ -43,7 +43,7 @@ def run():
             print(f'parsing lost clients promos for id {id_}, params {params}')
             dodois_parser = DodoISParser(*params)
             dodois_result = dodois_parser.parse('promo')
-            tasker.create_promo_tables(dodois_result, customer_id, params[1], params[6], params[7], 'ПК')
+            tasker.create_promo_tables(dodois_result, customer_id, params[2], params[6], params[7], 'ПК')
             print(f'creating lost clients promo report for id {id_} completed.')
 
         except (ValueError, BadZipFile) as e:
