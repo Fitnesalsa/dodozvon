@@ -48,9 +48,8 @@ def run():
             print(f'parsing id {id_}, params {params_set}...')
             dodois_parser = DodoISParser(*params_set)
             dodois_storer = DodoISStorer(id_, db=db)
-            dodois_clients_statistic = dodois_parser.parse('clients_statistic')
             dodois_orders = dodois_parser.parse('orders')
-            dodois_storer.store(dodois_clients_statistic, dodois_orders)
+            dodois_storer.store(dodois_orders)
             db.commit()  # после каждой пиццерии
         except (ValueError, BadZipFile) as e:
             log_func(f'{params_set[2]}: Что-то пошло не так ({e})')

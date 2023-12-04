@@ -556,32 +556,13 @@ class DodoISStorer(DatabaseWorker):
         super().__init__(db)
         self._id = id_
 
-    def store(self, df_clients: pd.DataFrame, df_orders: pd.DataFrame):
+    def store(self, df_orders: pd.DataFrame):
         """
         Записываем построчно результат из датафрейма в БД.
         Предполагаем, что датафрейм уже подготовленный.
         :param df: датафрейм с результатами
         :return: None
         """
-        # клиентская статистика
-        if df_clients is not None:
-            params = []
-            for row in df_clients.iterrows():
-                params.append((self._id, row[1]['№ телефона'], row[1]['Дата первого заказа'],
-                               row[1]['Отдел первого заказа'], row[1]['Дата последнего заказа'],
-                               row[1]['Отдел последнего заказа'], row[1]['first_order_type'],
-                               row[1]['Кол-во заказов'], row[1]['Сумма заказа'], '', '', ''))
-            query = """INSERT INTO clients (db_unit_id, phone, first_order_datetime, first_order_city, 
-                       last_order_datetime, last_order_city, first_order_type, orders_amt, orders_sum,
-                       sms_text, sms_text_city, ftp_path_city) VALUES %s
-                       ON CONFLICT (phone) DO UPDATE
-                       SET (db_unit_id, last_order_datetime, last_order_city, orders_amt, orders_sum) = 
-                       (EXCLUDED.db_unit_id, EXCLUDED.last_order_datetime, EXCLUDED.last_order_city, 
-                       EXCLUDED.orders_amt + clients.orders_amt, EXCLUDED.orders_sum + clients.orders_sum)
-                       WHERE EXCLUDED.last_order_datetime > clients.last_order_datetime;
-                       """
-            self._db.execute(query, params)
-
         # заказы
         if df_orders is not None:
             params = []
@@ -595,7 +576,7 @@ class DodoISStorer(DatabaseWorker):
             self._db.execute(query, params)
 
         # записываем дату последнего обновления в таблицу auth
-        if df_clients is not None or df_orders is not None:
+        if df_orders is not None:
             self._db.execute("""
             UPDATE auth
             SET last_update = now() AT TIME ZONE 'UTC'
